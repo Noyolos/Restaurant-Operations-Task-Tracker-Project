@@ -1,0 +1,143 @@
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text not null check (length(trim(full_name)) > 0),
+  username text not null check (length(trim(username)) > 0),
+  role text not null check (role in ('Manager', 'Staff')),
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists profiles_username_lower_idx
+  on public.profiles (lower(username));
+
+create table if not exists public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (length(trim(title)) > 0),
+  description text not null default '',
+  assigned_to uuid references public.profiles(id) on delete set null,
+  status text not null default 'To Do' check (status in ('To Do', 'In Progress', 'Done')),
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create schema if not exists private;
+
+create or replace function private.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (id, full_name, username, role)
+  values (
+    new.id,
+    trim(new.raw_user_meta_data ->> 'full_name'),
+    lower(trim(new.raw_user_meta_data ->> 'username')),
+    case when new.raw_user_meta_data ->> 'role' = 'Manager' then 'Manager' else 'Staff' end
+  );
+  return new;
+end;
+$$;
+
+revoke all on function private.handle_new_user() from public;
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function private.handle_new_user();
+
+create or replace function private.protect_staff_task_updates()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  current_role text;
+begin
+  select role into current_role
+  from public.profiles
+  where id = auth.uid();
+
+  if current_role <> 'Manager' and (
+    new.title is distinct from old.title or
+    new.description is distinct from old.description or
+    new.assigned_to is distinct from old.assigned_to or
+    new.created_by is distinct from old.created_by or
+    new.created_at is distinct from old.created_at
+  ) then
+    raise exception 'Staff may only update task status';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_staff_task_updates on public.tasks;
+create trigger protect_staff_task_updates
+  before update on public.tasks
+  for each row execute function private.protect_staff_task_updates();
+
+alter table public.profiles enable row level security;
+alter table public.tasks enable row level security;
+
+drop policy if exists "Authenticated users can view profiles" on public.profiles;
+create policy "Authenticated users can view profiles"
+  on public.profiles for select
+  to authenticated
+  using (true);
+
+drop policy if exists "Users can view permitted tasks" on public.tasks;
+create policy "Users can view permitted tasks"
+  on public.tasks for select
+  to authenticated
+  using (
+    assigned_to = (select auth.uid())
+    or exists (
+      select 1 from public.profiles
+      where id = (select auth.uid()) and role = 'Manager'
+    )
+  );
+
+drop policy if exists "Managers can create tasks" on public.tasks;
+create policy "Managers can create tasks"
+  on public.tasks for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.profiles
+      where id = (select auth.uid()) and role = 'Manager'
+    )
+  );
+
+drop policy if exists "Managers and assigned staff can update tasks" on public.tasks;
+create policy "Managers and assigned staff can update tasks"
+  on public.tasks for update
+  to authenticated
+  using (
+    assigned_to = (select auth.uid())
+    or exists (
+      select 1 from public.profiles
+      where id = (select auth.uid()) and role = 'Manager'
+    )
+  )
+  with check (
+    assigned_to = (select auth.uid())
+    or exists (
+      select 1 from public.profiles
+      where id = (select auth.uid()) and role = 'Manager'
+    )
+  );
+
+drop policy if exists "Managers can delete tasks" on public.tasks;
+create policy "Managers can delete tasks"
+  on public.tasks for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = (select auth.uid()) and role = 'Manager'
+    )
+  );
+
+grant usage on schema public to authenticated;
+grant select on public.profiles to authenticated;
+grant select, insert, update, delete on public.tasks to authenticated;
