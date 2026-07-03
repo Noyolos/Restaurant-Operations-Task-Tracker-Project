@@ -9,11 +9,70 @@
 <body>
   <div class="container">
     <header class="header">
-      <h1>Restaurant Operations Task Tracker</h1>
-      <p>Iteration 2: Improved restaurant task management with editing, staff assignment, status tracking, filtering, and validation.</p>
+      <div class="header-row">
+        <div>
+          <h1>Restaurant Operations Task Tracker</h1>
+          <p>Iteration 2: Improved restaurant task management with editing, staff assignment, status tracking, filtering, and validation.</p>
+        </div>
+
+        <div id="sessionPanel" class="session-panel hidden" aria-live="polite">
+          <div class="session-copy">
+            <span class="session-label">Logged in as</span>
+            <strong id="sessionName">User Name</strong>
+            <span id="sessionRole" class="role-badge">Role</span>
+          </div>
+
+          <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
+        </div>
+      </div>
     </header>
 
-    <main class="main-grid">
+    <section id="authScreen" class="auth-shell">
+      <div class="card auth-card">
+        <div class="auth-tabs" role="tablist" aria-label="Authentication forms">
+          <button type="button" id="showLoginBtn" class="auth-tab active">Login</button>
+          <button type="button" id="showRegisterBtn" class="auth-tab">Register</button>
+        </div>
+
+        <div id="authMessage" class="auth-message hidden" aria-live="polite"></div>
+
+        <form id="loginForm" class="auth-form">
+          <h2>Login</h2>
+
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" autocomplete="username" placeholder="Enter your username" />
+
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Enter your password" />
+
+          <button type="submit" class="primary-btn">Login</button>
+        </form>
+
+        <form id="registerForm" class="auth-form hidden">
+          <h2>Create Account</h2>
+
+          <label for="registerFullName">Full Name</label>
+          <input type="text" id="registerFullName" autocomplete="name" placeholder="Enter your full name" />
+
+          <label for="registerUsername">Username</label>
+          <input type="text" id="registerUsername" autocomplete="username" placeholder="Choose a username" />
+
+          <label for="registerPassword">Password</label>
+          <input type="password" id="registerPassword" autocomplete="new-password" placeholder="Create a password" />
+
+          <label for="registerRole">Role</label>
+          <select id="registerRole">
+            <option value="">Select a role</option>
+            <option value="Manager">Manager</option>
+            <option value="Staff">Staff</option>
+          </select>
+
+          <button type="submit" class="primary-btn">Register</button>
+        </form>
+      </div>
+    </section>
+
+    <main id="appScreen" class="main-grid hidden">
       <section class="card">
         <h2 id="formTitle">Create Restaurant Task</h2>
 

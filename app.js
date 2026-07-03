@@ -1,3 +1,27 @@
+const TASKS_STORAGE_KEY = "tasks";
+const USERS_STORAGE_KEY = "registeredUsers";
+const SESSION_STORAGE_KEY = "activeUserSession";
+const VALID_ROLES = ["Manager", "Staff"];
+const VALID_STATUSES = ["To Do", "In Progress", "Done"];
+
+const authScreen = document.getElementById("authScreen");
+const appScreen = document.getElementById("appScreen");
+const sessionPanel = document.getElementById("sessionPanel");
+const sessionName = document.getElementById("sessionName");
+const sessionRole = document.getElementById("sessionRole");
+const logoutBtn = document.getElementById("logoutBtn");
+const authMessage = document.getElementById("authMessage");
+const showLoginBtn = document.getElementById("showLoginBtn");
+const showRegisterBtn = document.getElementById("showRegisterBtn");
+const loginForm = document.getElementById("loginForm");
+const loginUsername = document.getElementById("loginUsername");
+const loginPassword = document.getElementById("loginPassword");
+const registerForm = document.getElementById("registerForm");
+const registerFullName = document.getElementById("registerFullName");
+const registerUsername = document.getElementById("registerUsername");
+const registerPassword = document.getElementById("registerPassword");
+const registerRole = document.getElementById("registerRole");
+
 const taskForm = document.getElementById("taskForm");
 const taskTitle = document.getElementById("taskTitle");
 const taskDescription = document.getElementById("taskDescription");
@@ -10,25 +34,171 @@ const formTitle = document.getElementById("formTitle");
 const submitBtn = document.getElementById("submitBtn");
 const cancelEditBtn = document.getElementById("cancelEditBtn");
 
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let tasks = sanitizeTasks(readStorageValue(TASKS_STORAGE_KEY, []));
+let users = sanitizeUsers(readStorageValue(USERS_STORAGE_KEY, []));
+let activeUser = null;
 let editingTaskId = null;
 
-/*
-  This migration keeps older Iteration 1 tasks usable.
-  Iteration 1 only had title and description.
-  Iteration 2 adds assigned user and status.
-*/
-tasks = tasks.map((task) => ({
-  ...task,
-  assignedTo: task.assignedTo || "Unassigned Staff",
-  status: task.status || "To Do",
-  createdAt: task.createdAt || new Date().toLocaleDateString()
-}));
-
 saveTasks();
+restoreActiveSession();
+
+function readStorageValue(key, fallbackValue) {
+  const storedValue = localStorage.getItem(key);
+
+  if (storedValue === null) {
+    return fallbackValue;
+  }
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    return parsedValue ?? fallbackValue;
+  } catch (error) {
+    return fallbackValue;
+  }
+}
+
+function writeStorageValue(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function sanitizeTasks(storedTasks) {
+  if (!Array.isArray(storedTasks)) {
+    return [];
+  }
+
+  return storedTasks
+    .filter((task) => task && typeof task === "object")
+    .map((task, index) => ({
+      ...task,
+      id: task.id ?? `legacy-task-${index + 1}`,
+      title: typeof task.title === "string" && task.title.trim() !== "" ? task.title.trim() : "Untitled Task",
+      description: typeof task.description === "string" ? task.description.trim() : "",
+      assignedTo:
+        typeof task.assignedTo === "string" && task.assignedTo.trim() !== ""
+          ? task.assignedTo.trim()
+          : "Unassigned Staff",
+      status: VALID_STATUSES.includes(task.status) ? task.status : "To Do",
+      createdAt:
+        typeof task.createdAt === "string" && task.createdAt.trim() !== ""
+          ? task.createdAt
+          : new Date().toLocaleDateString()
+    }));
+}
+
+function sanitizeUsers(storedUsers) {
+  if (!Array.isArray(storedUsers)) {
+    return [];
+  }
+
+  return storedUsers
+    .filter((user) => user && typeof user === "object")
+    .map((user) => ({
+      fullName: typeof user.fullName === "string" ? user.fullName.trim() : "",
+      username: typeof user.username === "string" ? user.username.trim() : "",
+      password: typeof user.password === "string" ? user.password : "",
+      role: VALID_ROLES.includes(user.role) ? user.role : "Staff"
+    }))
+    .filter((user) => user.fullName !== "" && user.username !== "" && user.password !== "");
+}
+
+function getUsernameKey(username) {
+  return username.trim().toLowerCase();
+}
+
+function findUserByUsername(username) {
+  const usernameKey = getUsernameKey(username);
+  return users.find((user) => getUsernameKey(user.username) === usernameKey);
+}
 
 function saveTasks() {
-  localStorage.setItem("tasks", JSON.stringify(tasks));
+  writeStorageValue(TASKS_STORAGE_KEY, tasks);
+}
+
+function saveUsers() {
+  writeStorageValue(USERS_STORAGE_KEY, users);
+}
+
+function restoreActiveSession() {
+  const storedSession = readStorageValue(SESSION_STORAGE_KEY, null);
+
+  if (!storedSession || typeof storedSession !== "object" || typeof storedSession.username !== "string") {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    return;
+  }
+
+  const matchedUser = findUserByUsername(storedSession.username);
+
+  if (!matchedUser) {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    return;
+  }
+
+  activeUser = matchedUser;
+}
+
+function setActiveUser(user) {
+  activeUser = user;
+  writeStorageValue(SESSION_STORAGE_KEY, {
+    username: user.username
+  });
+  updateInterface();
+}
+
+function clearActiveUser() {
+  activeUser = null;
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+  updateInterface();
+}
+
+function showAuthMessage(message, type) {
+  authMessage.textContent = message;
+  authMessage.className = "auth-message";
+  authMessage.classList.add(type === "success" ? "is-success" : "is-error");
+}
+
+function hideAuthMessage() {
+  authMessage.textContent = "";
+  authMessage.className = "auth-message hidden";
+}
+
+function setAuthMode(mode, options = {}) {
+  const isLoginMode = mode === "login";
+  const shouldClearMessage = options.clearMessage !== false;
+
+  loginForm.classList.toggle("hidden", !isLoginMode);
+  registerForm.classList.toggle("hidden", isLoginMode);
+  showLoginBtn.classList.toggle("active", isLoginMode);
+  showRegisterBtn.classList.toggle("active", !isLoginMode);
+
+  if (shouldClearMessage) {
+    hideAuthMessage();
+  }
+}
+
+function updateInterface() {
+  const isLoggedIn = activeUser !== null;
+
+  authScreen.classList.toggle("hidden", isLoggedIn);
+  appScreen.classList.toggle("hidden", !isLoggedIn);
+  sessionPanel.classList.toggle("hidden", !isLoggedIn);
+
+  if (isLoggedIn) {
+    sessionName.textContent = activeUser.fullName;
+    sessionRole.textContent = activeUser.role;
+    return;
+  }
+
+  sessionName.textContent = "User Name";
+  sessionRole.textContent = "Role";
+}
+
+function showTaskError(message) {
+  errorMessage.textContent = message;
+  errorMessage.style.display = "block";
+}
+
+function hideTaskError() {
+  errorMessage.style.display = "none";
 }
 
 function getStatusClass(status) {
@@ -56,12 +226,8 @@ function updateStats() {
 function renderTasks() {
   taskList.innerHTML = "";
 
-  const selectedFilter = statusFilter.value;
-
   const filteredTasks =
-    selectedFilter === "All"
-      ? tasks
-      : tasks.filter((task) => task.status === selectedFilter);
+    statusFilter.value === "All" ? tasks : tasks.filter((task) => task.status === statusFilter.value);
 
   if (filteredTasks.length === 0) {
     const emptyState = document.createElement("div");
@@ -87,7 +253,7 @@ function renderTasks() {
 
     const meta = document.createElement("div");
     meta.className = "task-meta";
-    meta.textContent = `Assigned staff: ${task.assignedTo || "Unassigned Staff"} | Created: ${task.createdAt}`;
+    meta.textContent = `Assigned staff: ${task.assignedTo} | Created: ${task.createdAt}`;
 
     taskInfo.appendChild(title);
     taskInfo.appendChild(meta);
@@ -154,7 +320,7 @@ function resetForm() {
   formTitle.textContent = "Create Restaurant Task";
   submitBtn.textContent = "Add Task";
   cancelEditBtn.classList.add("hidden");
-  errorMessage.style.display = "none";
+  hideTaskError();
 }
 
 function editTask(id) {
@@ -167,7 +333,7 @@ function editTask(id) {
   editingTaskId = id;
 
   taskTitle.value = task.title;
-  taskDescription.value = task.description;
+  taskDescription.value = task.description || "";
   assignedUser.value = task.assignedTo;
   taskStatus.value = task.status;
 
@@ -199,15 +365,74 @@ function changeStatus(id, status) {
   renderTasks();
 }
 
-taskForm.addEventListener("submit", function (event) {
+loginForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  if (taskTitle.value.trim() === "") {
-    errorMessage.style.display = "block";
+  const usernameValue = loginUsername.value.trim();
+  const passwordValue = loginPassword.value.trim();
+
+  if (usernameValue === "" || passwordValue === "") {
+    showAuthMessage("Please enter both username and password.", "error");
     return;
   }
 
-  errorMessage.style.display = "none";
+  const matchedUser = findUserByUsername(usernameValue);
+
+  if (!matchedUser || matchedUser.password !== passwordValue) {
+    showAuthMessage("Incorrect username or password.", "error");
+    return;
+  }
+
+  loginForm.reset();
+  hideAuthMessage();
+  setActiveUser(matchedUser);
+  renderTasks();
+});
+
+registerForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const fullNameValue = registerFullName.value.trim();
+  const usernameValue = registerUsername.value.trim();
+  const passwordValue = registerPassword.value.trim();
+  const roleValue = registerRole.value;
+
+  if (fullNameValue === "" || usernameValue === "" || passwordValue === "" || roleValue === "") {
+    showAuthMessage("Please complete full name, username, password, and role.", "error");
+    return;
+  }
+
+  if (findUserByUsername(usernameValue)) {
+    showAuthMessage("That username is already registered. Please choose another username.", "error");
+    return;
+  }
+
+  users.push({
+    fullName: fullNameValue,
+    username: usernameValue,
+    password: passwordValue,
+    role: roleValue
+  });
+
+  saveUsers();
+  registerForm.reset();
+  setAuthMode("login", {
+    clearMessage: false
+  });
+  loginUsername.value = usernameValue;
+  loginPassword.value = "";
+  showAuthMessage("Registration successful. Please log in with your new account.", "success");
+});
+
+taskForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  if (taskTitle.value.trim() === "") {
+    showTaskError("Please enter a restaurant task title.");
+    return;
+  }
+
+  hideTaskError();
 
   if (editingTaskId !== null) {
     tasks = tasks.map((task) => {
@@ -224,16 +449,14 @@ taskForm.addEventListener("submit", function (event) {
       return task;
     });
   } else {
-    const newTask = {
+    tasks.push({
       id: Date.now(),
       title: taskTitle.value.trim(),
       description: taskDescription.value.trim(),
       assignedTo: assignedUser.value.trim() || "Unassigned Staff",
       status: taskStatus.value,
       createdAt: new Date().toLocaleDateString()
-    };
-
-    tasks.push(newTask);
+    });
   }
 
   saveTasks();
@@ -241,7 +464,18 @@ taskForm.addEventListener("submit", function (event) {
   resetForm();
 });
 
+showLoginBtn.addEventListener("click", () => setAuthMode("login"));
+showRegisterBtn.addEventListener("click", () => setAuthMode("register"));
+logoutBtn.addEventListener("click", () => {
+  clearActiveUser();
+  loginForm.reset();
+  registerForm.reset();
+  setAuthMode("login");
+  resetForm();
+});
 cancelEditBtn.addEventListener("click", resetForm);
 statusFilter.addEventListener("change", renderTasks);
 
+setAuthMode("login");
+updateInterface();
 renderTasks();
