@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant Operations Task Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Restaurant Operations Task Tracker</h1>
+      <p>Iteration 2: Improved restaurant task management with editing, staff assignment, status tracking, filtering, and validation.</p>
+    </header>
+
+    <main class="main-grid">
+      <section class="card">
+        <h2 id="formTitle">Create Restaurant Task</h2>
+
+        <div id="errorMessage" class="error-message">
+          Please enter a restaurant task title.
+        </div>
+
+        <form id="taskForm">
+          <label for="taskTitle">Restaurant Task</label>
+          <input type="text" id="taskTitle" placeholder="Example: Prepare dinner service station" />
+
+          <label for="taskDescription">Details</label>
+          <textarea id="taskDescription" placeholder="Add preparation notes or service instructions"></textarea>
+
+          <label for="assignedUser">Assigned Staff</label>
+          <input type="text" id="assignedUser" placeholder="Example: Kitchen Team" />
+
+          <label for="taskStatus">Status</label>
+          <select id="taskStatus">
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+
+          <div class="button-row">
+            <button type="submit" id="submitBtn" class="primary-btn">Add Task</button>
+            <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="task-header-row">
+          <h2>Operations Board</h2>
+
+          <select id="statusFilter">
+            <option value="All">All Operations</option>
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+
+        <div class="stats">
+          <div class="stat-box">
+            <strong id="todoCount">0</strong>
+            <span>To Do</span>
+          </div>
+
+          <div class="stat-box">
+            <strong id="progressCount">0</strong>
+            <span>In Progress</span>
+          </div>
+
+          <div class="stat-box">
+            <strong id="doneCount">0</strong>
+            <span>Done</span>
+          </div>
+        </div>
+
+        <div id="taskList" class="task-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
