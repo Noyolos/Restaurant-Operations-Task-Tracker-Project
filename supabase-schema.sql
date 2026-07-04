@@ -53,6 +53,10 @@ as $$
 declare
   current_role text;
 begin
+  if pg_trigger_depth() > 1 then
+    return new;
+  end if;
+
   select role into current_role
   from public.profiles
   where id = auth.uid();
