@@ -19,6 +19,19 @@ create table if not exists public.tasks (
   created_at timestamptz not null default now()
 );
 
+alter table public.tasks
+  add column if not exists priority text not null default 'Medium',
+  add column if not exists category text not null default 'Other',
+  add column if not exists due_date date;
+
+alter table public.tasks drop constraint if exists tasks_priority_check;
+alter table public.tasks add constraint tasks_priority_check
+  check (priority in ('Low', 'Medium', 'High'));
+
+alter table public.tasks drop constraint if exists tasks_category_check;
+alter table public.tasks add constraint tasks_category_check
+  check (category in ('Kitchen Preparation', 'Cleaning', 'Inventory', 'Service Setup', 'Maintenance', 'Other'));
+
 create schema if not exists private;
 
 create or replace function private.handle_new_user()
@@ -65,6 +78,9 @@ begin
     new.title is distinct from old.title or
     new.description is distinct from old.description or
     new.assigned_to is distinct from old.assigned_to or
+    new.priority is distinct from old.priority or
+    new.category is distinct from old.category or
+    new.due_date is distinct from old.due_date or
     new.created_by is distinct from old.created_by or
     new.created_at is distinct from old.created_at
   ) then

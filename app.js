@@ -3,6 +3,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const LEGACY_TASKS_STORAGE_KEY = "tasks";
 const LEGACY_MIGRATION_KEY = "supabaseTasksMigrated";
 const VALID_STATUSES = ["To Do", "In Progress", "Done"];
+const VALID_PRIORITIES = ["Low", "Medium", "High"];
+const VALID_CATEGORIES = ["Kitchen Preparation", "Cleaning", "Inventory", "Service Setup", "Maintenance", "Other"];
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const authSection = document.getElementById("authSection");
@@ -29,8 +31,16 @@ const taskTitle = document.getElementById("taskTitle");
 const taskDescription = document.getElementById("taskDescription");
 const assignedUser = document.getElementById("assignedUser");
 const taskStatus = document.getElementById("taskStatus");
+const taskPriority = document.getElementById("taskPriority");
+const taskCategory = document.getElementById("taskCategory");
+const taskDueDate = document.getElementById("taskDueDate");
 const taskList = document.getElementById("taskList");
 const statusFilter = document.getElementById("statusFilter");
+const priorityFilter = document.getElementById("priorityFilter");
+const categoryFilter = document.getElementById("categoryFilter");
+const staffFilter = document.getElementById("staffFilter");
+const overdueFilter = document.getElementById("overdueFilter");
+const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 const taskMessage = document.getElementById("taskMessage");
 const formTitle = document.getElementById("formTitle");
 const submitBtn = document.getElementById("submitBtn");
@@ -96,6 +106,37 @@ function getStatusClass(status) {
   return "status-todo";
 }
 
+function getPriorityClass(priority) {
+  return `priority-${priority.toLowerCase()}`;
+}
+
+function isValidDateValue(value) {
+  if (!value) {
+    return true;
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return false;
+  }
+
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.getUTCFullYear() === Number(match[1])
+    && date.getUTCMonth() === Number(match[2]) - 1
+    && date.getUTCDate() === Number(match[3]);
+}
+
+function isTaskOverdue(task) {
+  if (!task.due_date || task.status === "Done") {
+    return false;
+  }
+
+  const today = new Date();
+  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return task.due_date < localToday;
+}
+
 function getErrorMessage(error, fallback) {
   if (!error) {
     return fallback;
@@ -136,6 +177,32 @@ function renderAssignmentOptions(selectedId = "") {
   assignedUser.value = getProfileById(selectedId)?.role === "Staff" ? selectedId : "";
 }
 
+function renderStaffFilterOptions() {
+  const selectedValue = staffFilter.value;
+  staffFilter.innerHTML = "";
+
+  const allOption = document.createElement("option");
+  allOption.value = "All";
+  allOption.textContent = "All Staff";
+  staffFilter.appendChild(allOption);
+
+  const unassignedOption = document.createElement("option");
+  unassignedOption.value = "Unassigned";
+  unassignedOption.textContent = "Unassigned";
+  staffFilter.appendChild(unassignedOption);
+
+  getStaffProfiles().forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.full_name;
+    staffFilter.appendChild(option);
+  });
+
+  staffFilter.value = Array.from(staffFilter.options).some((option) => option.value === selectedValue)
+    ? selectedValue
+    : "All";
+}
+
 function updateStats() {
   document.getElementById("todoCount").textContent = tasks.filter((task) => task.status === "To Do").length;
   document.getElementById("progressCount").textContent = tasks.filter((task) => task.status === "In Progress").length;
@@ -148,10 +215,18 @@ function canChangeTaskStatus(task) {
 
 function renderTasks() {
   taskList.innerHTML = "";
-  const selectedFilter = statusFilter.value;
-  const filteredTasks = selectedFilter === "All"
-    ? tasks
-    : tasks.filter((task) => task.status === selectedFilter);
+  const filteredTasks = tasks.filter((task) => {
+    const matchesStatus = statusFilter.value === "All" || task.status === statusFilter.value;
+    const matchesPriority = priorityFilter.value === "All" || task.priority === priorityFilter.value;
+    const matchesCategory = categoryFilter.value === "All" || task.category === categoryFilter.value;
+    const matchesStaff = staffFilter.value === "All"
+      || (staffFilter.value === "Unassigned" ? !getProfileById(task.assigned_to) : task.assigned_to === staffFilter.value);
+    const overdue = isTaskOverdue(task);
+    const matchesOverdue = overdueFilter.value === "All"
+      || (overdueFilter.value === "Overdue" ? overdue : !overdue);
+
+    return matchesStatus && matchesPriority && matchesCategory && matchesStaff && matchesOverdue;
+  });
 
   if (filteredTasks.length === 0) {
     const emptyState = document.createElement("div");
@@ -177,7 +252,8 @@ function renderTasks() {
     meta.className = "task-meta";
     const assignedStaff = getProfileById(task.assigned_to);
     const createdDate = new Date(task.created_at).toLocaleDateString();
-    meta.textContent = `Assigned staff: ${assignedStaff?.full_name || "Unassigned"} | Created: ${createdDate}`;
+    const dueDate = task.due_date ? new Date(`${task.due_date}T00:00:00`).toLocaleDateString() : "No due date";
+    meta.textContent = `Assigned staff: ${assignedStaff?.full_name || "Unassigned"} | Created: ${createdDate} | Due: ${dueDate}`;
     taskInfo.appendChild(title);
     taskInfo.appendChild(meta);
 
@@ -185,7 +261,27 @@ function renderTasks() {
     badge.className = `status-badge ${getStatusClass(task.status)}`;
     badge.textContent = task.status;
     taskTop.appendChild(taskInfo);
-    taskTop.appendChild(badge);
+    const badges = document.createElement("div");
+    badges.className = "task-badges";
+    const priorityBadge = document.createElement("span");
+    priorityBadge.className = `priority-badge ${getPriorityClass(task.priority)}`;
+    priorityBadge.textContent = `${task.priority} Priority`;
+    const categoryBadge = document.createElement("span");
+    categoryBadge.className = "category-badge";
+    categoryBadge.textContent = task.category;
+    badges.appendChild(badge);
+    badges.appendChild(priorityBadge);
+    badges.appendChild(categoryBadge);
+
+    if (isTaskOverdue(task)) {
+      const overdueBadge = document.createElement("span");
+      overdueBadge.className = "overdue-badge";
+      overdueBadge.textContent = "Overdue";
+      badges.appendChild(overdueBadge);
+      taskItem.classList.add("task-overdue");
+    }
+
+    taskTop.appendChild(badges);
 
     const description = document.createElement("div");
     description.className = "task-desc";
@@ -232,6 +328,8 @@ function resetTaskForm() {
   taskForm.reset();
   renderAssignmentOptions();
   taskStatus.value = "To Do";
+  taskPriority.value = "Medium";
+  taskCategory.value = "Other";
   formTitle.textContent = "Create Restaurant Task";
   submitBtn.textContent = "Add Task";
   cancelEditBtn.classList.add("hidden");
@@ -255,6 +353,7 @@ function renderApp() {
   taskFormCard.classList.toggle("hidden", !isManager());
   mainGrid.classList.toggle("single-column", !isManager());
   renderAssignmentOptions();
+  renderStaffFilterOptions();
   renderTasks();
 }
 
@@ -274,7 +373,7 @@ async function loadProfiles() {
 async function loadTasks() {
   const { data, error } = await supabaseClient
     .from("tasks")
-    .select("id, title, description, assigned_to, status, created_at")
+    .select("id, title, description, assigned_to, status, priority, category, due_date, created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -318,6 +417,9 @@ async function migrateLegacyTasks() {
         description: typeof task.description === "string" ? task.description.trim() : "",
         assigned_to: assignedProfile?.id || null,
         status: VALID_STATUSES.includes(task.status) ? task.status : "To Do",
+        priority: VALID_PRIORITIES.includes(task.priority) ? task.priority : "Medium",
+        category: VALID_CATEGORIES.includes(task.category) ? task.category : "Other",
+        due_date: isValidDateValue(task.dueDate) ? task.dueDate || null : null,
         created_by: activeUser.id
       };
     });
@@ -381,6 +483,9 @@ function editTask(id) {
   taskDescription.value = task.description;
   renderAssignmentOptions(task.assigned_to);
   taskStatus.value = task.status;
+  taskPriority.value = VALID_PRIORITIES.includes(task.priority) ? task.priority : "Medium";
+  taskCategory.value = VALID_CATEGORIES.includes(task.category) ? task.category : "Other";
+  taskDueDate.value = task.due_date || "";
   formTitle.textContent = "Edit Restaurant Task";
   submitBtn.textContent = "Update Task";
   cancelEditBtn.classList.remove("hidden");
@@ -534,9 +639,37 @@ taskForm.addEventListener("submit", async (event) => {
   const description = taskDescription.value.trim();
   const assignedTo = getProfileById(assignedUser.value)?.role === "Staff" ? assignedUser.value : null;
   const status = VALID_STATUSES.includes(taskStatus.value) ? taskStatus.value : "To Do";
+  const priority = taskPriority.value;
+  const category = taskCategory.value;
+  const dueDate = taskDueDate.value;
 
   if (!title) {
     setMessage(taskMessage, "error", "Please enter a restaurant task title.");
+    return;
+  }
+
+  if (assignedUser.value && !assignedTo) {
+    setMessage(taskMessage, "error", "Please select a registered Staff account or Unassigned.");
+    return;
+  }
+
+  if (!VALID_STATUSES.includes(taskStatus.value)) {
+    setMessage(taskMessage, "error", "Please select a valid task status.");
+    return;
+  }
+
+  if (!VALID_PRIORITIES.includes(priority)) {
+    setMessage(taskMessage, "error", "Please select a valid task priority.");
+    return;
+  }
+
+  if (!VALID_CATEGORIES.includes(category)) {
+    setMessage(taskMessage, "error", "Please select a valid task category.");
+    return;
+  }
+
+  if (!isValidDateValue(dueDate)) {
+    setMessage(taskMessage, "error", "Please select a valid due date.");
     return;
   }
 
@@ -544,7 +677,10 @@ taskForm.addEventListener("submit", async (event) => {
     title,
     description,
     assigned_to: assignedTo,
-    status
+    status,
+    priority,
+    category,
+    due_date: dueDate || null
   };
 
   const result = editingTaskId
@@ -563,6 +699,17 @@ taskForm.addEventListener("submit", async (event) => {
 
 cancelEditBtn.addEventListener("click", resetTaskForm);
 statusFilter.addEventListener("change", renderTasks);
+[priorityFilter, categoryFilter, staffFilter, overdueFilter].forEach((filter) => {
+  filter.addEventListener("change", renderTasks);
+});
+clearFiltersBtn.addEventListener("click", () => {
+  statusFilter.value = "All";
+  priorityFilter.value = "All";
+  categoryFilter.value = "All";
+  staffFilter.value = "All";
+  overdueFilter.value = "All";
+  renderTasks();
+});
 
 switchAuthTab("login");
 initializeApp();

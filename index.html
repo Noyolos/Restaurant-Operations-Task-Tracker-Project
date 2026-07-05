@@ -89,6 +89,26 @@
               <option value="Done">Done</option>
             </select>
 
+            <label for="taskPriority">Priority</label>
+            <select id="taskPriority">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+            </select>
+
+            <label for="taskCategory">Category</label>
+            <select id="taskCategory">
+              <option value="Kitchen Preparation">Kitchen Preparation</option>
+              <option value="Cleaning">Cleaning</option>
+              <option value="Inventory">Inventory</option>
+              <option value="Service Setup">Service Setup</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Other" selected>Other</option>
+            </select>
+
+            <label for="taskDueDate">Due Date</label>
+            <input type="date" id="taskDueDate" />
+
             <div class="button-row">
               <button type="submit" id="submitBtn" class="primary-btn">Add Task</button>
               <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Cancel</button>
@@ -103,12 +123,52 @@
               <p id="boardSubtitle" class="board-subtitle">Sign in to manage restaurant operations.</p>
             </div>
 
-            <select id="statusFilter">
-              <option value="All">All Operations</option>
-              <option value="To Do">To Do</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Done">Done</option>
-            </select>
+          </div>
+
+          <div class="filter-grid" aria-label="Task filters">
+            <div>
+              <label for="statusFilter">Status</label>
+              <select id="statusFilter">
+                <option value="All">All Statuses</option>
+                <option value="To Do">To Do</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
+            <div>
+              <label for="priorityFilter">Priority</label>
+              <select id="priorityFilter">
+                <option value="All">All Priorities</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+            <div>
+              <label for="categoryFilter">Category</label>
+              <select id="categoryFilter">
+                <option value="All">All Categories</option>
+                <option value="Kitchen Preparation">Kitchen Preparation</option>
+                <option value="Cleaning">Cleaning</option>
+                <option value="Inventory">Inventory</option>
+                <option value="Service Setup">Service Setup</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label for="staffFilter">Assigned Staff</label>
+              <select id="staffFilter"></select>
+            </div>
+            <div>
+              <label for="overdueFilter">Due Status</label>
+              <select id="overdueFilter">
+                <option value="All">All Due Dates</option>
+                <option value="Overdue">Overdue Only</option>
+                <option value="Not Overdue">Not Overdue</option>
+              </select>
+            </div>
+            <button type="button" id="clearFiltersBtn" class="secondary-btn filter-clear-btn">Clear Filters</button>
           </div>
 
           <div class="stats">
