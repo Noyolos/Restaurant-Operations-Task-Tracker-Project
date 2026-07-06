@@ -99,56 +99,29 @@
       <main id="mainGrid" class="main-grid">
         <section id="taskFormCard" class="card task-drawer hidden" aria-label="Task editor">
           <div class="drawer-header">
-            <div><p class="drawer-kicker">Task details</p><h2 id="formTitle">Create Restaurant Task</h2></div>
+            <div><p class="drawer-kicker">Task details</p><h2 id="formTitle">Create Task</h2></div>
             <button type="button" id="closeTaskDrawerBtn" class="drawer-close" aria-label="Close task editor">×</button>
           </div>
 
           <div id="taskMessage" class="status-message hidden"></div>
 
           <form id="taskForm">
-            <label for="quickTaskSelect">Quick Task</label>
-            <select id="quickTaskSelect">
-              <option value="">Choose a common or recent task</option>
-            </select>
+            <div class="form-field task-select-field">
+              <div class="task-template-label">
+                <label for="quickTaskSelect">Task</label>
+                <button type="button" id="manageTaskTemplatesBtn" class="template-edit-btn" title="Manage task options" aria-label="Manage task options">✎</button>
+              </div>
+              <select id="quickTaskSelect" required></select>
+              <input type="hidden" id="taskTitle" />
+            </div>
+            <div class="form-field form-field-wide"><label for="taskDescription">Details</label><textarea id="taskDescription" placeholder="Add preparation notes or service instructions"></textarea></div>
+            <div class="form-field"><label for="assignedUser">Assigned Staff</label><select id="assignedUser"></select></div>
+            <div class="form-field"><label for="taskStatus">Status</label><select id="taskStatus"><option value="To Do">To Do</option><option value="In Progress">In Progress</option><option value="Done">Done</option></select></div>
+            <div class="form-field"><label for="taskPriority">Priority</label><select id="taskPriority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select></div>
+            <div class="form-field"><label for="taskCategory">Category</label><select id="taskCategory"><option value="Kitchen Preparation">Kitchen Preparation</option><option value="Cleaning">Cleaning</option><option value="Inventory">Inventory</option><option value="Service Setup">Service Setup</option><option value="Maintenance">Maintenance</option><option value="Other" selected>Other</option></select></div>
+            <div class="form-field"><label for="taskDueDate">Due Date</label><input type="date" id="taskDueDate" lang="en-GB" /><p class="field-hint">Displayed in English, for example 06 Jul 2026.</p></div>
 
-            <label for="taskTitle">Restaurant Task</label>
-            <input type="text" id="taskTitle" placeholder="Example: Prepare dinner service station" />
-
-            <label for="taskDescription">Details</label>
-            <textarea id="taskDescription" placeholder="Add preparation notes or service instructions"></textarea>
-
-            <label for="assignedUser">Assigned Staff</label>
-            <select id="assignedUser"></select>
-
-            <label for="taskStatus">Status</label>
-            <select id="taskStatus">
-              <option value="To Do">To Do</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Done">Done</option>
-            </select>
-
-            <label for="taskPriority">Priority</label>
-            <select id="taskPriority">
-              <option value="Low">Low</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="High">High</option>
-            </select>
-
-            <label for="taskCategory">Category</label>
-            <select id="taskCategory">
-              <option value="Kitchen Preparation">Kitchen Preparation</option>
-              <option value="Cleaning">Cleaning</option>
-              <option value="Inventory">Inventory</option>
-              <option value="Service Setup">Service Setup</option>
-              <option value="Maintenance">Maintenance</option>
-              <option value="Other" selected>Other</option>
-            </select>
-
-            <label for="taskDueDate">Due Date</label>
-            <input type="date" id="taskDueDate" lang="en-GB" />
-            <p class="field-hint">Displayed in English, for example 06 Jul 2026.</p>
-
-            <div class="button-row">
+            <div class="button-row form-field-wide">
               <button type="submit" id="submitBtn" class="primary-btn">Add Task</button>
               <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Cancel</button>
             </div>
@@ -255,6 +228,21 @@
       <div id="taskDrawerBackdrop" class="drawer-backdrop hidden"></div>
     </section>
   </div>
+
+  <section id="taskTemplateModal" class="template-modal hidden" aria-label="Manage task options">
+    <div class="template-dialog">
+      <div class="drawer-header">
+        <div><p class="drawer-kicker">Reusable options</p><h2>Manage Tasks</h2></div>
+        <button type="button" id="closeTaskTemplateModalBtn" class="drawer-close" aria-label="Close task manager">×</button>
+      </div>
+      <form id="taskTemplateForm" class="template-add-row">
+        <input type="text" id="taskTemplateInput" placeholder="Enter a new task name" maxlength="100" />
+        <button type="submit" id="saveTaskTemplateBtn" class="primary-btn">Add Task</button>
+      </form>
+      <p id="taskTemplateMessage" class="template-message"></p>
+      <div id="taskTemplateList" class="template-list"></div>
+    </div>
+  </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
   <script src="app.js"></script>

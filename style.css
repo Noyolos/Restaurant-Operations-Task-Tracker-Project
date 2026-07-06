@@ -1131,3 +1131,135 @@ body.drawer-open {
 .hidden {
   display: none !important;
 }
+
+/* Editable task templates */
+.task-template-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.template-edit-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: -5px 0 4px;
+  border: 1px solid #fcd34d;
+  border-radius: 9px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 17px;
+}
+
+.template-edit-btn:hover {
+  background: #fef3c7;
+}
+
+.template-modal {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.template-dialog {
+  width: min(620px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+}
+
+.template-add-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.template-add-row input {
+  margin: 0;
+}
+
+.template-message {
+  min-height: 20px;
+  margin: 9px 0;
+  color: #b45309;
+  font-size: 12px;
+}
+
+.template-list {
+  display: grid;
+  gap: 8px;
+}
+
+.template-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.template-row > div {
+  display: flex;
+  gap: 6px;
+}
+
+/* Horizontal edit dialog */
+.task-drawer.edit-mode {
+  top: 50%;
+  right: 50%;
+  width: min(920px, calc(100% - 40px));
+  height: auto;
+  max-height: calc(100vh - 40px);
+  border-radius: 22px;
+  transform: translate(50%, -50%);
+  animation: edit-dialog-in 200ms ease-out;
+}
+
+.task-drawer.edit-mode #taskForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.task-drawer.edit-mode .form-field-wide,
+.task-drawer.edit-mode .task-select-field {
+  grid-column: 1 / -1;
+}
+
+.task-drawer.edit-mode textarea {
+  min-height: 74px;
+}
+
+@keyframes edit-dialog-in {
+  from { opacity: 0; transform: translate(50%, -46%) scale(0.98); }
+  to { opacity: 1; transform: translate(50%, -50%) scale(1); }
+}
+
+@media (max-width: 620px) {
+  .template-add-row,
+  .task-drawer.edit-mode #taskForm {
+    grid-template-columns: 1fr;
+  }
+
+  .task-drawer.edit-mode .form-field-wide,
+  .task-drawer.edit-mode .task-select-field {
+    grid-column: auto;
+  }
+
+  .template-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

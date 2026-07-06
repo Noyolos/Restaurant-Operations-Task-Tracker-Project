@@ -2,7 +2,7 @@ const SUPABASE_URL = "https://tcsvafdvnyttxptlgapk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjc3ZhZmR2bnl0dHhwdGxnYXBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODc1OTksImV4cCI6MjA5ODY2MzU5OX0.23zk-m--_LLBuQdAKXD9UGy-hD92SnJNWP7TCn41nz4";
 const LEGACY_TASKS_STORAGE_KEY = "tasks";
 const LEGACY_MIGRATION_KEY = "supabaseTasksMigrated";
-const RECENT_TASKS_STORAGE_KEY = "recentRestaurantTasks";
+const TASK_TEMPLATES_STORAGE_KEY = "restaurantTaskTemplates";
 const VALID_STATUSES = ["To Do", "In Progress", "Done"];
 const VALID_PRIORITIES = ["Low", "Medium", "High"];
 const VALID_CATEGORIES = ["Kitchen Preparation", "Cleaning", "Inventory", "Service Setup", "Maintenance", "Other"];
@@ -47,6 +47,14 @@ const sideNav = document.getElementById("sideNav");
 const newTaskBtn = document.getElementById("newTaskBtn");
 const closeTaskDrawerBtn = document.getElementById("closeTaskDrawerBtn");
 const taskDrawerBackdrop = document.getElementById("taskDrawerBackdrop");
+const manageTaskTemplatesBtn = document.getElementById("manageTaskTemplatesBtn");
+const taskTemplateModal = document.getElementById("taskTemplateModal");
+const closeTaskTemplateModalBtn = document.getElementById("closeTaskTemplateModalBtn");
+const taskTemplateForm = document.getElementById("taskTemplateForm");
+const taskTemplateInput = document.getElementById("taskTemplateInput");
+const saveTaskTemplateBtn = document.getElementById("saveTaskTemplateBtn");
+const taskTemplateMessage = document.getElementById("taskTemplateMessage");
+const taskTemplateList = document.getElementById("taskTemplateList");
 const listViewBtn = document.getElementById("listViewBtn");
 const kanbanViewBtn = document.getElementById("kanbanViewBtn");
 const listView = document.getElementById("listView");
@@ -65,8 +73,9 @@ let activeUser = null;
 let editingTaskId = null;
 let activities = [];
 let currentView = "list";
+let editingTemplateIndex = null;
 
-const COMMON_TASKS = [
+const DEFAULT_TASKS = [
   "Prepare dinner service station",
   "Check ingredient and beverage inventory",
   "Clean and sanitise dining area",
@@ -170,39 +179,76 @@ function formatEnglishDate(value) {
   });
 }
 
-function getRecentTasks() {
+function getTaskTemplates() {
   try {
-    const stored = JSON.parse(localStorage.getItem(RECENT_TASKS_STORAGE_KEY) || "[]");
-    return Array.isArray(stored) ? stored.filter((title) => typeof title === "string" && title.trim()).slice(0, 5) : [];
+    const stored = JSON.parse(localStorage.getItem(TASK_TEMPLATES_STORAGE_KEY) || "null");
+    return Array.isArray(stored) ? stored.filter((title) => typeof title === "string" && title.trim()) : [...DEFAULT_TASKS];
   } catch (error) {
-    return [];
+    return [...DEFAULT_TASKS];
   }
 }
 
-function saveRecentTask(title) {
-  const recentTasks = [title, ...getRecentTasks().filter((item) => item.toLowerCase() !== title.toLowerCase())].slice(0, 5);
-  localStorage.setItem(RECENT_TASKS_STORAGE_KEY, JSON.stringify(recentTasks));
-  renderQuickTaskOptions();
+function saveTaskTemplates(templates) {
+  localStorage.setItem(TASK_TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
 }
 
 function renderQuickTaskOptions() {
-  quickTaskSelect.innerHTML = '<option value="">Choose a common or recent task</option>';
+  const selectedTask = taskTitle.value;
+  quickTaskSelect.innerHTML = '<option value="">Select a task</option>';
+  getTaskTemplates().forEach((title) => {
+    const option = document.createElement("option");
+    option.value = title;
+    option.textContent = title;
+    quickTaskSelect.appendChild(option);
+  });
+  quickTaskSelect.value = getTaskTemplates().includes(selectedTask) ? selectedTask : "";
+}
 
-  const addGroup = (label, titles) => {
-    if (!titles.length) return;
-    const group = document.createElement("optgroup");
-    group.label = label;
-    titles.forEach((title) => {
-      const option = document.createElement("option");
-      option.value = title;
-      option.textContent = title;
-      group.appendChild(option);
+function ensureTaskTemplate(title) {
+  const templates = getTaskTemplates();
+  if (!templates.some((item) => item.toLowerCase() === title.toLowerCase())) {
+    templates.push(title);
+    saveTaskTemplates(templates);
+  }
+}
+
+function renderTaskTemplateList() {
+  taskTemplateList.innerHTML = "";
+  const templates = getTaskTemplates();
+  templates.forEach((title, index) => {
+    const row = document.createElement("div");
+    row.className = "template-row";
+    const name = document.createElement("span");
+    name.textContent = title;
+    const actions = document.createElement("div");
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "secondary-btn small-btn";
+    editButton.textContent = "Edit";
+    editButton.addEventListener("click", () => {
+      editingTemplateIndex = index;
+      taskTemplateInput.value = title;
+      saveTaskTemplateBtn.textContent = "Save";
+      taskTemplateInput.focus();
     });
-    quickTaskSelect.appendChild(group);
-  };
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "danger-btn small-btn";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", () => {
+      const deletedTitle = templates[index];
+      templates.splice(index, 1);
+      saveTaskTemplates(templates);
+      if (taskTitle.value === deletedTitle && !editingTaskId) taskTitle.value = "";
+      renderTaskTemplateList();
+      renderQuickTaskOptions();
+    });
+    actions.append(editButton, deleteButton);
+    row.append(name, actions);
+    taskTemplateList.appendChild(row);
+  });
 
-  addGroup("Common Tasks", COMMON_TASKS);
-  addGroup("Recent Tasks", getRecentTasks());
+  if (!templates.length) taskTemplateList.textContent = "No task options. Add one above.";
 }
 
 function getCategoryIcon(category) {
@@ -370,13 +416,14 @@ function openTaskDrawer() {
   taskFormCard.classList.remove("hidden");
   taskDrawerBackdrop.classList.remove("hidden");
   document.body.classList.add("drawer-open");
-  taskTitle.focus();
+  quickTaskSelect.focus();
 }
 
 function closeTaskDrawer() {
   taskFormCard.classList.add("hidden");
   taskDrawerBackdrop.classList.add("hidden");
   document.body.classList.remove("drawer-open");
+  taskFormCard.classList.remove("edit-mode");
 }
 
 function getErrorMessage(error, fallback) {
@@ -580,7 +627,8 @@ function resetTaskForm() {
   taskCategory.value = "Other";
   renderQuickTaskOptions();
   quickTaskSelect.value = "";
-  formTitle.textContent = "Create Restaurant Task";
+  taskFormCard.classList.remove("edit-mode");
+  formTitle.textContent = "Create Task";
   submitBtn.textContent = "Add Task";
   cancelEditBtn.classList.add("hidden");
   setMessage(taskMessage, "", "");
@@ -750,17 +798,21 @@ function editTask(id) {
   }
 
   editingTaskId = id;
+  ensureTaskTemplate(task.title);
   taskTitle.value = task.title;
+  renderQuickTaskOptions();
+  quickTaskSelect.value = task.title;
   taskDescription.value = task.description;
   renderAssignmentOptions(task.assigned_to);
   taskStatus.value = task.status;
   taskPriority.value = VALID_PRIORITIES.includes(task.priority) ? task.priority : "Medium";
   taskCategory.value = VALID_CATEGORIES.includes(task.category) ? task.category : "Other";
   taskDueDate.value = task.due_date || "";
-  formTitle.textContent = "Edit Restaurant Task";
+  formTitle.textContent = "Update Assigned Task";
   submitBtn.textContent = "Update Task";
   cancelEditBtn.classList.remove("hidden");
   setMessage(taskMessage, "info", "Editing selected task.");
+  taskFormCard.classList.add("edit-mode");
   openTaskDrawer();
 }
 
@@ -979,7 +1031,6 @@ taskForm.addEventListener("submit", async (event) => {
   }
 
   await loadTasks();
-  saveRecentTask(title);
   await recordActivity(editingTaskId ? "Task edited" : "Task created", title);
 
   if (previousTask?.assigned_to !== assignedTo && editingTaskId) {
@@ -1009,10 +1060,53 @@ taskDrawerBackdrop.addEventListener("click", () => {
   closeTaskDrawer();
 });
 quickTaskSelect.addEventListener("change", () => {
-  if (quickTaskSelect.value) {
-    taskTitle.value = quickTaskSelect.value;
-    taskTitle.focus();
+  taskTitle.value = quickTaskSelect.value;
+  if (quickTaskSelect.value) taskDescription.focus();
+});
+manageTaskTemplatesBtn.addEventListener("click", () => {
+  editingTemplateIndex = null;
+  taskTemplateInput.value = "";
+  saveTaskTemplateBtn.textContent = "Add Task";
+  taskTemplateMessage.textContent = "";
+  renderTaskTemplateList();
+  taskTemplateModal.classList.remove("hidden");
+  taskTemplateInput.focus();
+});
+closeTaskTemplateModalBtn.addEventListener("click", () => taskTemplateModal.classList.add("hidden"));
+taskTemplateModal.addEventListener("click", (event) => {
+  if (event.target === taskTemplateModal) taskTemplateModal.classList.add("hidden");
+});
+taskTemplateForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const title = taskTemplateInput.value.trim();
+  const templates = getTaskTemplates();
+
+  if (!title) {
+    taskTemplateMessage.textContent = "Enter a task name.";
+    return;
   }
+
+  const duplicateIndex = templates.findIndex((item) => item.toLowerCase() === title.toLowerCase());
+  if (duplicateIndex !== -1 && duplicateIndex !== editingTemplateIndex) {
+    taskTemplateMessage.textContent = "This task option already exists.";
+    return;
+  }
+
+  if (editingTemplateIndex === null) {
+    templates.push(title);
+  } else {
+    const previousTitle = templates[editingTemplateIndex];
+    templates[editingTemplateIndex] = title;
+    if (taskTitle.value === previousTitle) taskTitle.value = title;
+  }
+
+  saveTaskTemplates(templates);
+  editingTemplateIndex = null;
+  taskTemplateInput.value = "";
+  saveTaskTemplateBtn.textContent = "Add Task";
+  taskTemplateMessage.textContent = "Task options updated.";
+  renderTaskTemplateList();
+  renderQuickTaskOptions();
 });
 statusFilter.addEventListener("change", renderTasks);
 [priorityFilter, categoryFilter, staffFilter, overdueFilter].forEach((filter) => {
