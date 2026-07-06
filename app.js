@@ -2,6 +2,7 @@ const SUPABASE_URL = "https://tcsvafdvnyttxptlgapk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjc3ZhZmR2bnl0dHhwdGxnYXBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODc1OTksImV4cCI6MjA5ODY2MzU5OX0.23zk-m--_LLBuQdAKXD9UGy-hD92SnJNWP7TCn41nz4";
 const LEGACY_TASKS_STORAGE_KEY = "tasks";
 const LEGACY_MIGRATION_KEY = "supabaseTasksMigrated";
+const RECENT_TASKS_STORAGE_KEY = "recentRestaurantTasks";
 const VALID_STATUSES = ["To Do", "In Progress", "Done"];
 const VALID_PRIORITIES = ["Low", "Medium", "High"];
 const VALID_CATEGORIES = ["Kitchen Preparation", "Cleaning", "Inventory", "Service Setup", "Maintenance", "Other"];
@@ -28,6 +29,7 @@ const boardSubtitle = document.getElementById("boardSubtitle");
 const taskFormCard = document.getElementById("taskFormCard");
 const taskForm = document.getElementById("taskForm");
 const taskTitle = document.getElementById("taskTitle");
+const quickTaskSelect = document.getElementById("quickTaskSelect");
 const taskDescription = document.getElementById("taskDescription");
 const assignedUser = document.getElementById("assignedUser");
 const taskStatus = document.getElementById("taskStatus");
@@ -63,6 +65,15 @@ let activeUser = null;
 let editingTaskId = null;
 let activities = [];
 let currentView = "list";
+
+const COMMON_TASKS = [
+  "Prepare dinner service station",
+  "Check ingredient and beverage inventory",
+  "Clean and sanitise dining area",
+  "Inspect kitchen equipment",
+  "Set up tables and menus",
+  "Review supplier delivery"
+];
 
 function normalizeUsername(username) {
   return username.trim().toLowerCase();
@@ -148,6 +159,50 @@ function isTaskOverdue(task) {
   const today = new Date();
   const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   return task.due_date < localToday;
+}
+
+function formatEnglishDate(value) {
+  if (!value) return "No due date";
+  return new Date(`${value}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+function getRecentTasks() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(RECENT_TASKS_STORAGE_KEY) || "[]");
+    return Array.isArray(stored) ? stored.filter((title) => typeof title === "string" && title.trim()).slice(0, 5) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveRecentTask(title) {
+  const recentTasks = [title, ...getRecentTasks().filter((item) => item.toLowerCase() !== title.toLowerCase())].slice(0, 5);
+  localStorage.setItem(RECENT_TASKS_STORAGE_KEY, JSON.stringify(recentTasks));
+  renderQuickTaskOptions();
+}
+
+function renderQuickTaskOptions() {
+  quickTaskSelect.innerHTML = '<option value="">Choose a common or recent task</option>';
+
+  const addGroup = (label, titles) => {
+    if (!titles.length) return;
+    const group = document.createElement("optgroup");
+    group.label = label;
+    titles.forEach((title) => {
+      const option = document.createElement("option");
+      option.value = title;
+      option.textContent = title;
+      group.appendChild(option);
+    });
+    quickTaskSelect.appendChild(group);
+  };
+
+  addGroup("Common Tasks", COMMON_TASKS);
+  addGroup("Recent Tasks", getRecentTasks());
 }
 
 function getCategoryIcon(category) {
@@ -442,7 +497,7 @@ function renderTasks() {
     meta.className = "task-meta";
     const assignedStaff = getProfileById(task.assigned_to);
     const createdDate = new Date(task.created_at).toLocaleDateString();
-    const dueDate = task.due_date ? new Date(`${task.due_date}T00:00:00`).toLocaleDateString() : "No due date";
+    const dueDate = formatEnglishDate(task.due_date);
     meta.textContent = `Assigned staff: ${assignedStaff?.full_name || "Unassigned"} | Created: ${createdDate} | Due: ${dueDate}`;
     taskInfo.appendChild(title);
     taskInfo.appendChild(meta);
@@ -523,6 +578,8 @@ function resetTaskForm() {
   taskStatus.value = "To Do";
   taskPriority.value = "Medium";
   taskCategory.value = "Other";
+  renderQuickTaskOptions();
+  quickTaskSelect.value = "";
   formTitle.textContent = "Create Restaurant Task";
   submitBtn.textContent = "Add Task";
   cancelEditBtn.classList.add("hidden");
@@ -922,6 +979,7 @@ taskForm.addEventListener("submit", async (event) => {
   }
 
   await loadTasks();
+  saveRecentTask(title);
   await recordActivity(editingTaskId ? "Task edited" : "Task created", title);
 
   if (previousTask?.assigned_to !== assignedTo && editingTaskId) {
@@ -949,6 +1007,12 @@ closeTaskDrawerBtn.addEventListener("click", () => {
 taskDrawerBackdrop.addEventListener("click", () => {
   resetTaskForm();
   closeTaskDrawer();
+});
+quickTaskSelect.addEventListener("change", () => {
+  if (quickTaskSelect.value) {
+    taskTitle.value = quickTaskSelect.value;
+    taskTitle.focus();
+  }
 });
 statusFilter.addEventListener("change", renderTasks);
 [priorityFilter, categoryFilter, staffFilter, overdueFilter].forEach((filter) => {

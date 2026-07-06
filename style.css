@@ -957,6 +957,17 @@ body.app-active .session-role {
   border-radius: 12px;
 }
 
+.task-drawer #quickTaskSelect {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.field-hint {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 body.drawer-open {
   overflow: hidden;
 }
