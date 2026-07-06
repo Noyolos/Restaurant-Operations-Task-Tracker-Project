@@ -9,8 +9,12 @@
 <body>
   <div class="container">
     <header class="header">
-      <h1>Restaurant Operations Task Tracker</h1>
-      <p>Secure restaurant task tracking with account registration, role-based access, staff assignment, status tracking, and persistent sessions.</p>
+      <div class="brand-mark" aria-hidden="true">R</div>
+      <div>
+        <p class="eyebrow">Restaurant Operations System</p>
+        <h1>ResTask Operations</h1>
+        <p>Plan daily work, assign staff, monitor progress, and keep every shift accountable.</p>
+      </div>
     </header>
 
     <section id="authSection" class="card auth-card">
@@ -68,7 +72,7 @@
 
       <nav class="workspace-nav" aria-label="Task view">
         <button type="button" id="listViewBtn" class="view-btn active">List View</button>
-        <button type="button" id="kanbanViewBtn" class="view-btn">Kanban Board</button>
+        <button type="button" id="kanbanViewBtn" class="view-btn">Board</button>
       </nav>
 
       <section class="analytics-strip" aria-label="Task analytics">
@@ -208,7 +212,7 @@
 
       <section id="kanbanView" class="card hidden">
         <div class="section-heading">
-          <div><h2>Kanban Board</h2><p>Tasks are grouped by their current workflow status.</p></div>
+          <div><h2>Task Board</h2><p>Tasks are grouped by their current workflow status.</p></div>
         </div>
         <div class="kanban-board">
           <section><h3>To Do <span id="kanbanTodoCount">0</span></h3><div id="kanbanTodo" class="kanban-column"></div></section>

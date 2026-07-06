@@ -1,38 +1,75 @@
+:root {
+  --nav: #0f172a;
+  --nav-soft: #1e293b;
+  --primary: #f59e0b;
+  --primary-deep: #d97706;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --line: #e2e8f0;
+  --text: #111827;
+  --muted: #64748b;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI", Tahoma, sans-serif;
 }
 
 body {
-  background: #f4f6fb;
-  color: #1f2937;
+  background: #f5f7fb;
+  color: var(--text);
   min-height: 100vh;
   padding: 32px 16px;
 }
 
 .container {
-  max-width: 1000px;
+  max-width: 1240px;
   margin: 0 auto;
 }
 
 .header {
-  background: white;
-  padding: 24px;
-  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, var(--nav), var(--nav-soft));
+  padding: 22px 24px;
+  border-radius: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.16);
+}
+
+.brand-mark {
+  display: grid;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  background: var(--primary);
+  color: #111827;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.eyebrow {
+  margin-bottom: 4px;
+  color: #fbbf24 !important;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .header h1 {
   font-size: 32px;
   margin-bottom: 8px;
-  color: #111827;
+  color: white;
 }
 
 .header p {
-  color: #6b7280;
+  color: #cbd5e1;
   line-height: 1.5;
 }
 
@@ -43,10 +80,11 @@ body {
 }
 
 .card {
-  background: white;
+  background: var(--surface);
   padding: 22px;
   border-radius: 18px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
 
 .card h2 {
@@ -73,7 +111,7 @@ body {
 }
 
 .tab-btn.active {
-  background: #2563eb;
+  background: var(--nav);
   color: white;
 }
 
@@ -114,8 +152,8 @@ textarea {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
 }
 
 button {
@@ -129,12 +167,13 @@ button {
 }
 
 .primary-btn {
-  background: #2563eb;
-  color: white;
+  background: var(--primary);
+  color: #111827;
 }
 
 .primary-btn:hover {
-  background: #1d4ed8;
+  background: var(--primary-deep);
+  color: white;
 }
 
 .secondary-btn {
@@ -200,24 +239,31 @@ button {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
+  border-left: 5px solid var(--primary);
 }
 
 .workspace-nav {
   display: flex;
   gap: 8px;
+  width: max-content;
+  padding: 4px;
   margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #eef2f7;
 }
 
 .view-btn {
   background: transparent;
   color: #475569;
-  border: 1px solid #cbd5e1;
+  border: 0;
+  border-radius: 999px;
 }
 
 .view-btn.active {
-  color: white;
-  background: #1e3a5f;
-  border-color: #1e3a5f;
+  color: var(--nav);
+  background: white;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
 }
 
 .analytics-strip {
@@ -227,12 +273,12 @@ button {
   margin-bottom: 20px;
   overflow: hidden;
   border: 1px solid #dbe2ea;
-  border-radius: 14px;
+  border-radius: 18px;
   background: #dbe2ea;
 }
 
 .analytics-strip div {
-  padding: 14px 10px;
+  padding: 17px 10px;
   background: white;
   text-align: center;
 }
@@ -243,7 +289,7 @@ button {
 }
 
 .analytics-strip strong {
-  font-size: 22px;
+  font-size: 26px;
   color: #17324d;
 }
 
@@ -675,4 +721,33 @@ button:disabled {
   .workload-row {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* Operations workspace visual refinement */
+.filter-grid {
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+
+.task-item {
+  border-radius: 16px;
+  box-shadow: 0 5px 15px rgba(15, 23, 42, 0.04);
+}
+
+.kanban-board > section {
+  min-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #f3f4f6;
+}
+
+.kanban-task {
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+.activity-item {
+  padding: 12px 14px;
+  border-radius: 0 14px 14px 0;
+  background: var(--surface-soft);
 }
