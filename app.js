@@ -41,6 +41,13 @@ const categoryFilter = document.getElementById("categoryFilter");
 const staffFilter = document.getElementById("staffFilter");
 const overdueFilter = document.getElementById("overdueFilter");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+const listViewBtn = document.getElementById("listViewBtn");
+const kanbanViewBtn = document.getElementById("kanbanViewBtn");
+const listView = document.getElementById("listView");
+const kanbanView = document.getElementById("kanbanView");
+const workloadCard = document.getElementById("workloadCard");
+const workloadList = document.getElementById("workloadList");
+const activityList = document.getElementById("activityList");
 const taskMessage = document.getElementById("taskMessage");
 const formTitle = document.getElementById("formTitle");
 const submitBtn = document.getElementById("submitBtn");
@@ -50,6 +57,8 @@ let profiles = [];
 let tasks = [];
 let activeUser = null;
 let editingTaskId = null;
+let activities = [];
+let currentView = "list";
 
 function normalizeUsername(username) {
   return username.trim().toLowerCase();
@@ -135,6 +144,136 @@ function isTaskOverdue(task) {
   const today = new Date();
   const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   return task.due_date < localToday;
+}
+
+async function recordActivity(action, taskTitle = null) {
+  if (!activeUser) {
+    return;
+  }
+
+  const { error } = await supabaseClient.from("activity_log").insert({
+    user_id: activeUser.id,
+    user_name: activeUser.full_name,
+    action,
+    task_title: taskTitle
+  });
+
+  if (!error) {
+    await loadActivities();
+    renderActivities();
+  }
+}
+
+function updateAnalytics() {
+  const values = {
+    totalAnalytics: tasks.length,
+    todoAnalytics: tasks.filter((task) => task.status === "To Do").length,
+    progressAnalytics: tasks.filter((task) => task.status === "In Progress").length,
+    doneAnalytics: tasks.filter((task) => task.status === "Done").length,
+    overdueAnalytics: tasks.filter(isTaskOverdue).length,
+    highAnalytics: tasks.filter((task) => task.priority === "High").length
+  };
+
+  Object.entries(values).forEach(([id, value]) => {
+    document.getElementById(id).textContent = value;
+  });
+}
+
+function createKanbanTask(task) {
+  const item = document.createElement("article");
+  item.className = `kanban-task${isTaskOverdue(task) ? " task-overdue" : ""}`;
+  const assignedStaff = getProfileById(task.assigned_to);
+  item.innerHTML = `<strong></strong><p></p><div class="kanban-tags"></div>`;
+  item.querySelector("strong").textContent = task.title;
+  item.querySelector("p").textContent = assignedStaff?.full_name || "Unassigned";
+  const tags = item.querySelector(".kanban-tags");
+  [task.priority, task.category].forEach((value) => {
+    const tag = document.createElement("span");
+    tag.textContent = value;
+    tags.appendChild(tag);
+  });
+
+  if (canChangeTaskStatus(task)) {
+    const actions = document.createElement("div");
+    actions.className = "kanban-actions";
+    VALID_STATUSES.filter((status) => status !== task.status).forEach((status) => {
+      const button = document.createElement("button");
+      button.className = "secondary-btn small-btn";
+      button.textContent = status;
+      button.addEventListener("click", () => changeStatus(task.id, status));
+      actions.appendChild(button);
+    });
+    item.appendChild(actions);
+  }
+
+  return item;
+}
+
+function renderKanban() {
+  const columns = {
+    "To Do": document.getElementById("kanbanTodo"),
+    "In Progress": document.getElementById("kanbanProgress"),
+    Done: document.getElementById("kanbanDone")
+  };
+
+  Object.values(columns).forEach((column) => { column.innerHTML = ""; });
+  tasks.forEach((task) => columns[task.status].appendChild(createKanbanTask(task)));
+  document.getElementById("kanbanTodoCount").textContent = tasks.filter((task) => task.status === "To Do").length;
+  document.getElementById("kanbanProgressCount").textContent = tasks.filter((task) => task.status === "In Progress").length;
+  document.getElementById("kanbanDoneCount").textContent = tasks.filter((task) => task.status === "Done").length;
+
+  Object.entries(columns).forEach(([status, column]) => {
+    if (!column.children.length) {
+      const empty = document.createElement("p");
+      empty.className = "kanban-empty";
+      empty.textContent = `No ${status.toLowerCase()} tasks.`;
+      column.appendChild(empty);
+    }
+  });
+}
+
+function renderWorkload() {
+  workloadList.innerHTML = "";
+  getStaffProfiles().forEach((profile) => {
+    const assignedTasks = tasks.filter((task) => task.assigned_to === profile.id);
+    const row = document.createElement("div");
+    row.className = "workload-row";
+    row.innerHTML = `<strong></strong><span>${assignedTasks.length} assigned</span><span>${assignedTasks.filter((task) => task.status !== "Done").length} active</span><span>${assignedTasks.filter((task) => task.status === "Done").length} completed</span>`;
+    row.querySelector("strong").textContent = profile.full_name;
+    workloadList.appendChild(row);
+  });
+
+  if (!workloadList.children.length) {
+    workloadList.textContent = "No Staff accounts are registered.";
+  }
+}
+
+function renderActivities() {
+  activityList.innerHTML = "";
+  activities.forEach((activity) => {
+    const item = document.createElement("div");
+    item.className = "activity-item";
+    const summary = activity.task_title ? `${activity.action}: ${activity.task_title}` : activity.action;
+    item.innerHTML = `<strong></strong><p></p><time></time>`;
+    item.querySelector("strong").textContent = activity.user_name;
+    item.querySelector("p").textContent = summary;
+    item.querySelector("time").textContent = new Date(activity.created_at).toLocaleString();
+    activityList.appendChild(item);
+  });
+
+  if (!activities.length) {
+    activityList.textContent = "No activity has been recorded yet.";
+  }
+}
+
+function setTaskView(view) {
+  currentView = view;
+  const showList = view === "list";
+  listView.classList.toggle("hidden", !showList);
+  kanbanView.classList.toggle("hidden", showList);
+  taskFormCard.classList.toggle("hidden", !isManager() || !showList);
+  listViewBtn.classList.toggle("active", showList);
+  kanbanViewBtn.classList.toggle("active", !showList);
 }
 
 function getErrorMessage(error, fallback) {
@@ -236,6 +375,9 @@ function renderTasks() {
       : "No tasks are currently assigned to your account for this filter.";
     taskList.appendChild(emptyState);
     updateStats();
+    updateAnalytics();
+    renderKanban();
+    if (isManager()) renderWorkload();
     return;
   }
 
@@ -321,6 +463,9 @@ function renderTasks() {
   });
 
   updateStats();
+  updateAnalytics();
+  renderKanban();
+  if (isManager()) renderWorkload();
 }
 
 function resetTaskForm() {
@@ -351,10 +496,13 @@ function renderApp() {
     ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
     : "Staff can only view tasks assigned to their own account and update their task status.";
   taskFormCard.classList.toggle("hidden", !isManager());
+  workloadCard.classList.toggle("hidden", !isManager());
   mainGrid.classList.toggle("single-column", !isManager());
   renderAssignmentOptions();
   renderStaffFilterOptions();
   renderTasks();
+  renderActivities();
+  setTaskView(currentView);
 }
 
 async function loadProfiles() {
@@ -381,6 +529,20 @@ async function loadTasks() {
   }
 
   tasks = data || [];
+}
+
+async function loadActivities() {
+  const { data, error } = await supabaseClient
+    .from("activity_log")
+    .select("id, user_name, action, task_title, created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    throw error;
+  }
+
+  activities = data || [];
 }
 
 function readLegacyTasks() {
@@ -445,6 +607,7 @@ async function loadActiveUser(userId) {
 
   await migrateLegacyTasks();
   await loadTasks();
+  await loadActivities();
 }
 
 async function initializeApp() {
@@ -497,6 +660,7 @@ async function deleteTask(id) {
     return;
   }
 
+  const targetTask = tasks.find((task) => task.id === id);
   const { error } = await supabaseClient.from("tasks").delete().eq("id", id);
 
   if (error) {
@@ -505,6 +669,7 @@ async function deleteTask(id) {
   }
 
   await loadTasks();
+  await recordActivity("Task deleted", targetTask?.title || "Deleted task");
   resetTaskForm();
   renderTasks();
 }
@@ -524,6 +689,7 @@ async function changeStatus(id, status) {
   }
 
   await loadTasks();
+  await recordActivity(`Task status changed to ${status}`, targetTask.title);
   renderTasks();
 }
 
@@ -559,6 +725,7 @@ loginForm.addEventListener("submit", async (event) => {
 
   try {
     await loadActiveUser(data.user.id);
+    await recordActivity("Logged in");
     loginForm.reset();
     setMessage(authMessage, "", "");
     resetTaskForm();
@@ -608,6 +775,12 @@ registerForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  await supabaseClient.from("activity_log").insert({
+    user_id: data.user.id,
+    user_name: fullName,
+    action: "User registered"
+  });
+
   await supabaseClient.auth.signOut({ scope: "local" });
   registerForm.reset();
   registerRole.value = "Manager";
@@ -620,7 +793,9 @@ logoutBtn.addEventListener("click", async () => {
   activeUser = null;
   profiles = [];
   tasks = [];
+  activities = [];
   editingTaskId = null;
+  currentView = "list";
   loginForm.reset();
   registerForm.reset();
   resetTaskForm();
@@ -683,6 +858,8 @@ taskForm.addEventListener("submit", async (event) => {
     due_date: dueDate || null
   };
 
+  const previousTask = tasks.find((task) => task.id === editingTaskId);
+
   const result = editingTaskId
     ? await supabaseClient.from("tasks").update(taskData).eq("id", editingTaskId)
     : await supabaseClient.from("tasks").insert({ ...taskData, created_by: activeUser.id });
@@ -693,6 +870,13 @@ taskForm.addEventListener("submit", async (event) => {
   }
 
   await loadTasks();
+  await recordActivity(editingTaskId ? "Task edited" : "Task created", title);
+
+  if (previousTask?.assigned_to !== assignedTo && editingTaskId) {
+    await recordActivity(`Task reassigned to ${getProfileById(assignedTo)?.full_name || "Unassigned"}`, title);
+  } else if (!editingTaskId && assignedTo) {
+    await recordActivity(`Task assigned to ${getProfileById(assignedTo)?.full_name}`, title);
+  }
   resetTaskForm();
   renderTasks();
 });
@@ -710,6 +894,8 @@ clearFiltersBtn.addEventListener("click", () => {
   overdueFilter.value = "All";
   renderTasks();
 });
+listViewBtn.addEventListener("click", () => setTaskView("list"));
+kanbanViewBtn.addEventListener("click", () => setTaskView("kanban"));
 
 switchAuthTab("login");
 initializeApp();

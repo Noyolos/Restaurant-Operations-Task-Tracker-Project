@@ -66,6 +66,20 @@
         <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
       </section>
 
+      <nav class="workspace-nav" aria-label="Task view">
+        <button type="button" id="listViewBtn" class="view-btn active">List View</button>
+        <button type="button" id="kanbanViewBtn" class="view-btn">Kanban Board</button>
+      </nav>
+
+      <section class="analytics-strip" aria-label="Task analytics">
+        <div><strong id="totalAnalytics">0</strong><span>Total</span></div>
+        <div><strong id="todoAnalytics">0</strong><span>To Do</span></div>
+        <div><strong id="progressAnalytics">0</strong><span>In Progress</span></div>
+        <div><strong id="doneAnalytics">0</strong><span>Done</span></div>
+        <div><strong id="overdueAnalytics">0</strong><span>Overdue</span></div>
+        <div><strong id="highAnalytics">0</strong><span>High Priority</span></div>
+      </section>
+
       <main id="mainGrid" class="main-grid">
         <section id="taskFormCard" class="card">
           <h2 id="formTitle">Create Restaurant Task</h2>
@@ -116,7 +130,7 @@
           </form>
         </section>
 
-        <section class="card">
+        <section id="listView" class="card">
           <div class="task-header-row">
             <div>
               <h2>Operations Board</h2>
@@ -191,6 +205,28 @@
           <div id="taskList" class="task-list"></div>
         </section>
       </main>
+
+      <section id="kanbanView" class="card hidden">
+        <div class="section-heading">
+          <div><h2>Kanban Board</h2><p>Tasks are grouped by their current workflow status.</p></div>
+        </div>
+        <div class="kanban-board">
+          <section><h3>To Do <span id="kanbanTodoCount">0</span></h3><div id="kanbanTodo" class="kanban-column"></div></section>
+          <section><h3>In Progress <span id="kanbanProgressCount">0</span></h3><div id="kanbanProgress" class="kanban-column"></div></section>
+          <section><h3>Done <span id="kanbanDoneCount">0</span></h3><div id="kanbanDone" class="kanban-column"></div></section>
+        </div>
+      </section>
+
+      <section class="reporting-grid">
+        <section id="workloadCard" class="card">
+          <div class="section-heading"><div><h2>Staff Workload</h2><p>Current assignment and completion totals.</p></div></div>
+          <div id="workloadList" class="workload-list"></div>
+        </section>
+        <section class="card">
+          <div class="section-heading"><div><h2>Recent Activity</h2><p>Latest account and task actions.</p></div></div>
+          <div id="activityList" class="activity-list"></div>
+        </section>
+      </section>
     </section>
   </div>
 
