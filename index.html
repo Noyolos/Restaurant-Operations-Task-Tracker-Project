@@ -15,6 +15,13 @@
         <h1>ResTask Operations</h1>
         <p>Plan daily work, assign staff, monitor progress, and keep every shift accountable.</p>
       </div>
+      <nav id="sideNav" class="side-nav hidden" aria-label="Workspace navigation">
+        <a href="#analyticsSection"><span>◆</span>Overview</a>
+        <a href="#listView"><span>☷</span>Tasks</a>
+        <a href="#kanbanView"><span>▦</span>Board</a>
+        <a href="#workloadCard"><span>◉</span>Team</a>
+        <a href="#activityCard"><span>↻</span>Activity</a>
+      </nav>
     </header>
 
     <section id="authSection" class="card auth-card">
@@ -60,6 +67,11 @@
     </section>
 
     <section id="appSection" class="hidden">
+      <section class="app-topbar">
+        <div><p class="eyebrow dark">Live workspace</p><h2>Restaurant Operations</h2></div>
+        <button type="button" id="newTaskBtn" class="new-task-btn hidden"><span>+</span> New Task</button>
+      </section>
+
       <section class="card session-card">
         <div>
           <p class="session-label">Active User</p>
@@ -75,7 +87,7 @@
         <button type="button" id="kanbanViewBtn" class="view-btn">Board</button>
       </nav>
 
-      <section class="analytics-strip" aria-label="Task analytics">
+      <section id="analyticsSection" class="analytics-strip" aria-label="Task analytics">
         <div><strong id="totalAnalytics">0</strong><span>Total</span></div>
         <div><strong id="todoAnalytics">0</strong><span>To Do</span></div>
         <div><strong id="progressAnalytics">0</strong><span>In Progress</span></div>
@@ -85,8 +97,11 @@
       </section>
 
       <main id="mainGrid" class="main-grid">
-        <section id="taskFormCard" class="card">
-          <h2 id="formTitle">Create Restaurant Task</h2>
+        <section id="taskFormCard" class="card task-drawer hidden" aria-label="Task editor">
+          <div class="drawer-header">
+            <div><p class="drawer-kicker">Task details</p><h2 id="formTitle">Create Restaurant Task</h2></div>
+            <button type="button" id="closeTaskDrawerBtn" class="drawer-close" aria-label="Close task editor">×</button>
+          </div>
 
           <div id="taskMessage" class="status-message hidden"></div>
 
@@ -215,9 +230,9 @@
           <div><h2>Task Board</h2><p>Tasks are grouped by their current workflow status.</p></div>
         </div>
         <div class="kanban-board">
-          <section><h3>To Do <span id="kanbanTodoCount">0</span></h3><div id="kanbanTodo" class="kanban-column"></div></section>
-          <section><h3>In Progress <span id="kanbanProgressCount">0</span></h3><div id="kanbanProgress" class="kanban-column"></div></section>
-          <section><h3>Done <span id="kanbanDoneCount">0</span></h3><div id="kanbanDone" class="kanban-column"></div></section>
+          <section class="board-column todo-column"><h3><span><i class="status-dot"></i>To Do</span><span id="kanbanTodoCount">0</span></h3><div id="kanbanTodo" class="kanban-column"></div></section>
+          <section class="board-column progress-column"><h3><span><i class="status-dot"></i>In Progress</span><span id="kanbanProgressCount">0</span></h3><div id="kanbanProgress" class="kanban-column"></div></section>
+          <section class="board-column done-column"><h3><span><i class="status-dot"></i>Done</span><span id="kanbanDoneCount">0</span></h3><div id="kanbanDone" class="kanban-column"></div></section>
         </div>
       </section>
 
@@ -226,11 +241,12 @@
           <div class="section-heading"><div><h2>Staff Workload</h2><p>Current assignment and completion totals.</p></div></div>
           <div id="workloadList" class="workload-list"></div>
         </section>
-        <section class="card">
+        <section id="activityCard" class="card">
           <div class="section-heading"><div><h2>Recent Activity</h2><p>Latest account and task actions.</p></div></div>
           <div id="activityList" class="activity-list"></div>
         </section>
       </section>
+      <div id="taskDrawerBackdrop" class="drawer-backdrop hidden"></div>
     </section>
   </div>
 

@@ -751,3 +751,372 @@ button:disabled {
   border-radius: 0 14px 14px 0;
   background: var(--surface-soft);
 }
+
+/* SaaS workspace shell */
+body.app-active {
+  padding: 0;
+}
+
+body.app-active .container {
+  max-width: none;
+  margin: 0;
+}
+
+body.app-active .header {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  width: 238px;
+  height: 100vh;
+  margin: 0;
+  padding: 26px 18px;
+  border-radius: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  box-shadow: 10px 0 30px rgba(15, 23, 42, 0.12);
+}
+
+body.app-active .header > div:nth-child(2) h1 {
+  font-size: 22px;
+}
+
+body.app-active .header > div:nth-child(2) > p:last-child {
+  display: none;
+}
+
+.side-nav {
+  display: grid;
+  width: 100%;
+  gap: 7px;
+  margin-top: 20px;
+}
+
+.side-nav a {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 13px;
+  border-radius: 12px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.side-nav a:hover,
+.side-nav a:focus-visible {
+  color: white;
+  background: rgba(255, 255, 255, 0.09);
+  transform: translateX(3px);
+}
+
+.side-nav a span {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  color: #fbbf24;
+}
+
+body.app-active #appSection {
+  min-height: 100vh;
+  margin-left: 238px;
+  padding: 24px;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.app-topbar h2 {
+  font-size: 26px;
+}
+
+.eyebrow.dark {
+  color: #b45309 !important;
+}
+
+.new-task-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: #111827;
+  box-shadow: 0 10px 22px rgba(245, 158, 11, 0.24);
+}
+
+.new-task-btn span {
+  font-size: 21px;
+  line-height: 1;
+}
+
+.new-task-btn:hover {
+  color: white;
+  background: var(--primary-deep);
+  transform: translateY(-1px);
+}
+
+body.app-active .session-card {
+  padding: 13px 16px;
+  border-left-width: 4px;
+  box-shadow: none;
+}
+
+body.app-active .session-card h2 {
+  display: inline;
+  margin-right: 8px;
+  font-size: 15px;
+}
+
+body.app-active .session-label {
+  display: none;
+}
+
+body.app-active .session-role {
+  display: inline;
+  font-size: 12px;
+}
+
+.main-grid,
+.main-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
+/* Task drawer */
+.task-drawer {
+  position: fixed;
+  z-index: 60;
+  top: 0;
+  right: 0;
+  width: min(440px, 100%);
+  height: 100vh;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 22px 0 0 22px;
+  box-shadow: -24px 0 70px rgba(15, 23, 42, 0.24);
+  animation: drawer-in 220ms ease-out;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  animation: backdrop-in 180ms ease-out;
+}
+
+.drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.drawer-header h2 {
+  margin: 0;
+}
+
+.drawer-kicker {
+  margin-bottom: 5px;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.drawer-close {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 11px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 22px;
+}
+
+.task-drawer label {
+  font-size: 12px;
+}
+
+.task-drawer input,
+.task-drawer textarea,
+.task-drawer select {
+  margin-bottom: 12px;
+  border-radius: 12px;
+}
+
+body.drawer-open {
+  overflow: hidden;
+}
+
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Board identity */
+.board-column .status-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 8px;
+  border-radius: 50%;
+}
+
+.todo-column .status-dot { background: #94a3b8; }
+.progress-column .status-dot { background: #2563eb; }
+.done-column .status-dot { background: #16a34a; }
+
+.board-task-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.category-icon,
+.staff-avatar {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+/* Workload capacity visualization */
+.workload-row {
+  display: block;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.workload-heading {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.workload-heading small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.capacity-label {
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.capacity-low { background: #16a34a; color: white; }
+.capacity-medium { background: #f59e0b; color: #111827; }
+.capacity-high { background: #dc2626; color: white; }
+
+.capacity-track {
+  height: 9px;
+  margin: 12px 0 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.capacity-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 420ms ease;
+}
+
+.workload-metrics {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  body.app-active .header {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 16px;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  body.app-active .header > div:nth-child(2) {
+    flex: 1;
+  }
+
+  .side-nav {
+    display: flex;
+    width: auto;
+    margin: 0;
+    overflow-x: auto;
+  }
+
+  .side-nav a {
+    padding: 9px;
+    font-size: 0;
+  }
+
+  .side-nav a span {
+    font-size: 14px;
+  }
+
+  body.app-active #appSection {
+    margin-left: 0;
+    padding: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  body.app-active .header {
+    flex-wrap: wrap;
+  }
+
+  .side-nav {
+    flex-basis: 100%;
+    justify-content: space-between;
+    overflow: visible;
+  }
+
+  .side-nav a {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .app-topbar h2 { font-size: 21px; }
+  .new-task-btn { padding: 11px 13px; }
+  .task-drawer { border-radius: 0; }
+  .workload-metrics { flex-wrap: wrap; }
+}
+
+.hidden {
+  display: none !important;
+}

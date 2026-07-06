@@ -41,6 +41,10 @@ const categoryFilter = document.getElementById("categoryFilter");
 const staffFilter = document.getElementById("staffFilter");
 const overdueFilter = document.getElementById("overdueFilter");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+const sideNav = document.getElementById("sideNav");
+const newTaskBtn = document.getElementById("newTaskBtn");
+const closeTaskDrawerBtn = document.getElementById("closeTaskDrawerBtn");
+const taskDrawerBackdrop = document.getElementById("taskDrawerBackdrop");
 const listViewBtn = document.getElementById("listViewBtn");
 const kanbanViewBtn = document.getElementById("kanbanViewBtn");
 const listView = document.getElementById("listView");
@@ -146,6 +150,18 @@ function isTaskOverdue(task) {
   return task.due_date < localToday;
 }
 
+function getCategoryIcon(category) {
+  const icons = {
+    "Kitchen Preparation": "K",
+    Cleaning: "C",
+    Inventory: "I",
+    "Service Setup": "S",
+    Maintenance: "M",
+    Other: "O"
+  };
+  return icons[category] || "O";
+}
+
 async function recordActivity(action, taskTitle = null) {
   if (!activeUser) {
     return;
@@ -183,7 +199,8 @@ function createKanbanTask(task) {
   const item = document.createElement("article");
   item.className = `kanban-task${isTaskOverdue(task) ? " task-overdue" : ""}`;
   const assignedStaff = getProfileById(task.assigned_to);
-  item.innerHTML = `<strong></strong><p></p><div class="kanban-tags"></div>`;
+  item.innerHTML = `<div class="board-task-heading"><span class="category-icon"></span><strong></strong></div><p></p><div class="kanban-tags"></div>`;
+  item.querySelector(".category-icon").textContent = getCategoryIcon(task.category);
   item.querySelector("strong").textContent = task.title;
   item.querySelector("p").textContent = assignedStaff?.full_name || "Unassigned";
   const tags = item.querySelector(".kanban-tags");
@@ -236,10 +253,28 @@ function renderWorkload() {
   workloadList.innerHTML = "";
   getStaffProfiles().forEach((profile) => {
     const assignedTasks = tasks.filter((task) => task.assigned_to === profile.id);
+    const activeTasks = assignedTasks.filter((task) => task.status !== "Done");
+    const completedTasks = assignedTasks.filter((task) => task.status === "Done");
+    const overdueTasks = activeTasks.filter(isTaskOverdue);
+    const highTasks = activeTasks.filter((task) => task.priority === "High");
+    const loadScore = Math.min(100, activeTasks.length * 20 + overdueTasks.length * 25 + highTasks.length * 10);
+    const loadLevel = loadScore > 70 ? "high" : loadScore > 40 ? "medium" : "low";
+    const loadLabel = loadLevel === "high" ? "At capacity" : loadLevel === "medium" ? "Balanced" : "Available";
     const row = document.createElement("div");
     row.className = "workload-row";
-    row.innerHTML = `<strong></strong><span>${assignedTasks.length} assigned</span><span>${assignedTasks.filter((task) => task.status !== "Done").length} active</span><span>${assignedTasks.filter((task) => task.status === "Done").length} completed</span>`;
+    row.innerHTML = `<div class="workload-heading"><span class="staff-avatar"></span><div><strong></strong><small></small></div><b></b></div><div class="capacity-track"><span></span></div><div class="workload-metrics"><span></span><span></span><span></span></div>`;
+    row.querySelector(".staff-avatar").textContent = profile.full_name.charAt(0).toUpperCase();
     row.querySelector("strong").textContent = profile.full_name;
+    row.querySelector("small").textContent = `${assignedTasks.length} total tasks`;
+    row.querySelector("b").textContent = loadLabel;
+    row.querySelector("b").className = `capacity-label capacity-${loadLevel}`;
+    const capacityBar = row.querySelector(".capacity-track span");
+    capacityBar.className = `capacity-${loadLevel}`;
+    capacityBar.style.width = `${Math.max(loadScore, assignedTasks.length ? 12 : 4)}%`;
+    const metricItems = row.querySelectorAll(".workload-metrics span");
+    metricItems[0].textContent = `${activeTasks.length} active`;
+    metricItems[1].textContent = `${completedTasks.length} completed`;
+    metricItems[2].textContent = `${overdueTasks.length} overdue`;
     workloadList.appendChild(row);
   });
 
@@ -271,9 +306,22 @@ function setTaskView(view) {
   const showList = view === "list";
   listView.classList.toggle("hidden", !showList);
   kanbanView.classList.toggle("hidden", showList);
-  taskFormCard.classList.toggle("hidden", !isManager() || !showList);
   listViewBtn.classList.toggle("active", showList);
   kanbanViewBtn.classList.toggle("active", !showList);
+}
+
+function openTaskDrawer() {
+  if (!isManager()) return;
+  taskFormCard.classList.remove("hidden");
+  taskDrawerBackdrop.classList.remove("hidden");
+  document.body.classList.add("drawer-open");
+  taskTitle.focus();
+}
+
+function closeTaskDrawer() {
+  taskFormCard.classList.add("hidden");
+  taskDrawerBackdrop.classList.add("hidden");
+  document.body.classList.remove("drawer-open");
 }
 
 function getErrorMessage(error, fallback) {
@@ -485,6 +533,8 @@ function renderApp() {
   const loggedIn = Boolean(activeUser);
   authSection.classList.toggle("hidden", loggedIn);
   appSection.classList.toggle("hidden", !loggedIn);
+  document.body.classList.toggle("app-active", loggedIn);
+  sideNav.classList.toggle("hidden", !loggedIn);
 
   if (!loggedIn) {
     return;
@@ -495,7 +545,8 @@ function renderApp() {
   boardSubtitle.textContent = isManager()
     ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
     : "Staff can only view tasks assigned to their own account and update their task status.";
-  taskFormCard.classList.toggle("hidden", !isManager());
+  newTaskBtn.classList.toggle("hidden", !isManager());
+  closeTaskDrawer();
   workloadCard.classList.toggle("hidden", !isManager());
   mainGrid.classList.toggle("single-column", !isManager());
   renderAssignmentOptions();
@@ -653,6 +704,7 @@ function editTask(id) {
   submitBtn.textContent = "Update Task";
   cancelEditBtn.classList.remove("hidden");
   setMessage(taskMessage, "info", "Editing selected task.");
+  openTaskDrawer();
 }
 
 async function deleteTask(id) {
@@ -878,10 +930,26 @@ taskForm.addEventListener("submit", async (event) => {
     await recordActivity(`Task assigned to ${getProfileById(assignedTo)?.full_name}`, title);
   }
   resetTaskForm();
+  closeTaskDrawer();
   renderTasks();
 });
 
-cancelEditBtn.addEventListener("click", resetTaskForm);
+cancelEditBtn.addEventListener("click", () => {
+  resetTaskForm();
+  closeTaskDrawer();
+});
+newTaskBtn.addEventListener("click", () => {
+  resetTaskForm();
+  openTaskDrawer();
+});
+closeTaskDrawerBtn.addEventListener("click", () => {
+  resetTaskForm();
+  closeTaskDrawer();
+});
+taskDrawerBackdrop.addEventListener("click", () => {
+  resetTaskForm();
+  closeTaskDrawer();
+});
 statusFilter.addEventListener("change", renderTasks);
 [priorityFilter, categoryFilter, staffFilter, overdueFilter].forEach((filter) => {
   filter.addEventListener("change", renderTasks);
