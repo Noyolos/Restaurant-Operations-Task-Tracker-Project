@@ -55,6 +55,14 @@ const taskTemplateInput = document.getElementById("taskTemplateInput");
 const saveTaskTemplateBtn = document.getElementById("saveTaskTemplateBtn");
 const taskTemplateMessage = document.getElementById("taskTemplateMessage");
 const taskTemplateList = document.getElementById("taskTemplateList");
+const closeDayBtn = document.getElementById("closeDayBtn");
+const closeDayModal = document.getElementById("closeDayModal");
+const closeCloseDayModalBtn = document.getElementById("closeCloseDayModalBtn");
+const cancelCloseDayBtn = document.getElementById("cancelCloseDayBtn");
+const confirmCloseDayBtn = document.getElementById("confirmCloseDayBtn");
+const closeDayMessage = document.getElementById("closeDayMessage");
+const closingHistoryCard = document.getElementById("closingHistoryCard");
+const closingHistoryList = document.getElementById("closingHistoryList");
 const listViewBtn = document.getElementById("listViewBtn");
 const kanbanViewBtn = document.getElementById("kanbanViewBtn");
 const listView = document.getElementById("listView");
@@ -74,6 +82,7 @@ let editingTaskId = null;
 let activities = [];
 let currentView = "list";
 let editingTemplateIndex = null;
+let closings = [];
 
 const DEFAULT_TASKS = [
   "Prepare dinner service station",
@@ -177,6 +186,16 @@ function formatEnglishDate(value) {
     month: "short",
     year: "numeric"
   });
+}
+
+function getLocalDateValue(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getNextBusinessDate() {
+  const nextDate = new Date();
+  nextDate.setDate(nextDate.getDate() + 1);
+  return getLocalDateValue(nextDate);
 }
 
 function getTaskTemplates() {
@@ -400,6 +419,87 @@ function renderActivities() {
   if (!activities.length) {
     activityList.textContent = "No activity has been recorded yet.";
   }
+}
+
+function getClosingSummary() {
+  return {
+    total: tasks.length,
+    completed: tasks.filter((task) => task.status === "Done").length,
+    carried: tasks.filter((task) => task.status !== "Done").length,
+    overdue: tasks.filter(isTaskOverdue).length
+  };
+}
+
+function renderClosingHistory() {
+  closingHistoryList.innerHTML = "";
+  closings.forEach((closing) => {
+    const item = document.createElement("div");
+    item.className = "closing-history-row";
+    item.innerHTML = `<div><strong></strong><span></span></div><div class="closing-history-metrics"><span></span><span></span><span></span><span></span></div>`;
+    item.querySelector("strong").textContent = formatEnglishDate(closing.business_date);
+    item.querySelector("div > span").textContent = `Closed by ${closing.manager_name} at ${new Date(closing.closed_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+    const metrics = item.querySelectorAll(".closing-history-metrics span");
+    metrics[0].textContent = `${closing.total_tasks} total`;
+    metrics[1].textContent = `${closing.completed_tasks} completed`;
+    metrics[2].textContent = `${closing.carried_tasks} carried`;
+    metrics[3].textContent = `${closing.overdue_tasks} overdue`;
+    closingHistoryList.appendChild(item);
+  });
+  if (!closings.length) closingHistoryList.textContent = "No business days have been closed yet.";
+}
+
+function openCloseDayModal() {
+  const summary = getClosingSummary();
+  document.getElementById("closingTotal").textContent = summary.total;
+  document.getElementById("closingCompleted").textContent = summary.completed;
+  document.getElementById("closingCarried").textContent = summary.carried;
+  document.getElementById("closingOverdue").textContent = summary.overdue;
+  setMessage(closeDayMessage, "", "");
+  confirmCloseDayBtn.disabled = closings.some((closing) => closing.business_date === getLocalDateValue());
+  if (confirmCloseDayBtn.disabled) setMessage(closeDayMessage, "info", "Today’s operations have already been closed.");
+  closeDayModal.classList.remove("hidden");
+}
+
+async function closeBusinessDay() {
+  if (!isManager() || confirmCloseDayBtn.disabled) return;
+  confirmCloseDayBtn.disabled = true;
+  confirmCloseDayBtn.textContent = "Closing...";
+  const summary = getClosingSummary();
+  const closedAt = new Date().toISOString();
+
+  const completedResult = await supabaseClient.from("tasks").update({ archived_at: closedAt }).eq("status", "Done").is("archived_at", null);
+  const carriedResult = await supabaseClient.from("tasks").update({ status: "To Do", business_date: getNextBusinessDate() }).neq("status", "Done").is("archived_at", null);
+
+  if (completedResult.error || carriedResult.error) {
+    setMessage(closeDayMessage, "error", "Unable to reset today’s tasks. Please try again.");
+    confirmCloseDayBtn.disabled = false;
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  const { error } = await supabaseClient.from("daily_closings").insert({
+    business_date: getLocalDateValue(),
+    manager_id: activeUser.id,
+    manager_name: activeUser.full_name,
+    total_tasks: summary.total,
+    completed_tasks: summary.completed,
+    carried_tasks: summary.carried,
+    overdue_tasks: summary.overdue
+  });
+
+  if (error) {
+    setMessage(closeDayMessage, "error", "Tasks were reset, but the closing summary could not be saved.");
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  await recordActivity("Closed today’s operations");
+  await loadTasks();
+  await loadClosings();
+  renderTasks();
+  renderClosingHistory();
+  closeDayModal.classList.add("hidden");
+  confirmCloseDayBtn.textContent = "Confirm Closing";
 }
 
 function setTaskView(view) {
@@ -651,6 +751,8 @@ function renderApp() {
     ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
     : "Staff can only view tasks assigned to their own account and update their task status.";
   newTaskBtn.classList.toggle("hidden", !isManager());
+  closeDayBtn.classList.toggle("hidden", !isManager());
+  closingHistoryCard.classList.toggle("hidden", !isManager());
   closeTaskDrawer();
   workloadCard.classList.toggle("hidden", !isManager());
   mainGrid.classList.toggle("single-column", !isManager());
@@ -658,6 +760,7 @@ function renderApp() {
   renderStaffFilterOptions();
   renderTasks();
   renderActivities();
+  if (isManager()) renderClosingHistory();
   setTaskView(currentView);
 }
 
@@ -677,7 +780,8 @@ async function loadProfiles() {
 async function loadTasks() {
   const { data, error } = await supabaseClient
     .from("tasks")
-    .select("id, title, description, assigned_to, status, priority, category, due_date, created_at")
+    .select("id, title, description, assigned_to, status, priority, category, due_date, business_date, archived_at, created_at")
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -699,6 +803,22 @@ async function loadActivities() {
   }
 
   activities = data || [];
+}
+
+async function loadClosings() {
+  if (!isManager()) {
+    closings = [];
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("daily_closings")
+    .select("id, business_date, manager_name, total_tasks, completed_tasks, carried_tasks, overdue_tasks, closed_at")
+    .order("business_date", { ascending: false })
+    .limit(10);
+
+  if (error) throw error;
+  closings = data || [];
 }
 
 function readLegacyTasks() {
@@ -764,6 +884,7 @@ async function loadActiveUser(userId) {
   await migrateLegacyTasks();
   await loadTasks();
   await loadActivities();
+  await loadClosings();
 }
 
 async function initializeApp() {
@@ -955,6 +1076,7 @@ logoutBtn.addEventListener("click", async () => {
   profiles = [];
   tasks = [];
   activities = [];
+  closings = [];
   editingTaskId = null;
   currentView = "list";
   loginForm.reset();
@@ -1108,6 +1230,13 @@ taskTemplateForm.addEventListener("submit", (event) => {
   renderTaskTemplateList();
   renderQuickTaskOptions();
 });
+closeDayBtn.addEventListener("click", openCloseDayModal);
+closeCloseDayModalBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
+cancelCloseDayBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
+closeDayModal.addEventListener("click", (event) => {
+  if (event.target === closeDayModal) closeDayModal.classList.add("hidden");
+});
+confirmCloseDayBtn.addEventListener("click", closeBusinessDay);
 statusFilter.addEventListener("change", renderTasks);
 [priorityFilter, categoryFilter, staffFilter, overdueFilter].forEach((filter) => {
   filter.addEventListener("change", renderTasks);

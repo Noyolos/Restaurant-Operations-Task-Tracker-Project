@@ -69,7 +69,10 @@
     <section id="appSection" class="hidden">
       <section class="app-topbar">
         <div><p class="eyebrow dark">Live workspace</p><h2>Restaurant Operations</h2></div>
-        <button type="button" id="newTaskBtn" class="new-task-btn hidden"><span>+</span> New Task</button>
+        <div class="topbar-actions">
+          <button type="button" id="closeDayBtn" class="close-day-btn hidden"><span>✓</span> Close Today</button>
+          <button type="button" id="newTaskBtn" class="new-task-btn hidden"><span>+</span> New Task</button>
+        </div>
       </section>
 
       <section class="card session-card">
@@ -225,6 +228,10 @@
           <div id="activityList" class="activity-list"></div>
         </section>
       </section>
+      <section id="closingHistoryCard" class="card closing-history-card hidden">
+        <div class="section-heading"><div><h2>Closing History</h2><p>Daily business summaries recorded by Managers.</p></div></div>
+        <div id="closingHistoryList" class="closing-history-list"></div>
+      </section>
       <div id="taskDrawerBackdrop" class="drawer-backdrop hidden"></div>
     </section>
   </div>
@@ -241,6 +248,28 @@
       </form>
       <p id="taskTemplateMessage" class="template-message"></p>
       <div id="taskTemplateList" class="template-list"></div>
+    </div>
+  </section>
+
+  <section id="closeDayModal" class="template-modal hidden" aria-label="Close today's operations">
+    <div class="template-dialog closing-dialog">
+      <div class="drawer-header">
+        <div><p class="drawer-kicker">End of day</p><h2>Close Today’s Operations</h2></div>
+        <button type="button" id="closeCloseDayModalBtn" class="drawer-close" aria-label="Close summary">×</button>
+      </div>
+      <p class="closing-intro">Completed tasks will be archived. Unfinished tasks will move to the next business day as To Do.</p>
+      <div class="closing-summary">
+        <div><strong id="closingTotal">0</strong><span>Total</span></div>
+        <div><strong id="closingCompleted">0</strong><span>Completed</span></div>
+        <div><strong id="closingCarried">0</strong><span>Carry Forward</span></div>
+        <div><strong id="closingOverdue">0</strong><span>Overdue</span></div>
+      </div>
+      <div id="closeDayMessage" class="status-message hidden"></div>
+      <div class="closing-warning"><strong>This action cannot be undone.</strong><span>Review the figures before confirming.</span></div>
+      <div class="button-row closing-actions">
+        <button type="button" id="cancelCloseDayBtn" class="secondary-btn">Cancel</button>
+        <button type="button" id="confirmCloseDayBtn" class="primary-btn">Confirm Closing</button>
+      </div>
     </div>
   </section>
 
