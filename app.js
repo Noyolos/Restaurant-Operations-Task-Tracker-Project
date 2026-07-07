@@ -24,6 +24,7 @@ const registerPassword = document.getElementById("registerPassword");
 const registerRole = document.getElementById("registerRole");
 const activeUserName = document.getElementById("activeUserName");
 const activeUserRole = document.getElementById("activeUserRole");
+const accountSwitcher = document.getElementById("accountSwitcher");
 const logoutBtn = document.getElementById("logoutBtn");
 const boardSubtitle = document.getElementById("boardSubtitle");
 const taskFormCard = document.getElementById("taskFormCard");
@@ -63,6 +64,25 @@ const confirmCloseDayBtn = document.getElementById("confirmCloseDayBtn");
 const closeDayMessage = document.getElementById("closeDayMessage");
 const closingHistoryCard = document.getElementById("closingHistoryCard");
 const closingHistoryList = document.getElementById("closingHistoryList");
+const closingReviewList = document.getElementById("closingReviewList");
+const dailyTasksCard = document.getElementById("dailyTasksCard");
+const dailyTaskOptions = document.getElementById("dailyTaskOptions");
+const dailyTaskMessage = document.getElementById("dailyTaskMessage");
+const generateDailyTasksBtn = document.getElementById("generateDailyTasksBtn");
+const manageDailyTasksBtn = document.getElementById("manageDailyTasksBtn");
+const dailyTaskModal = document.getElementById("dailyTaskModal");
+const closeDailyTaskModalBtn = document.getElementById("closeDailyTaskModalBtn");
+const dailyTaskForm = document.getElementById("dailyTaskForm");
+const dailyTaskId = document.getElementById("dailyTaskId");
+const dailyTaskTitle = document.getElementById("dailyTaskTitle");
+const dailyTaskDescription = document.getElementById("dailyTaskDescription");
+const dailyTaskStaff = document.getElementById("dailyTaskStaff");
+const dailyTaskPriority = document.getElementById("dailyTaskPriority");
+const dailyTaskCategory = document.getElementById("dailyTaskCategory");
+const dailyTaskDueOffset = document.getElementById("dailyTaskDueOffset");
+const cancelDailyTaskEditBtn = document.getElementById("cancelDailyTaskEditBtn");
+const dailyTaskFormMessage = document.getElementById("dailyTaskFormMessage");
+const dailyTaskTemplateList = document.getElementById("dailyTaskTemplateList");
 const listViewBtn = document.getElementById("listViewBtn");
 const kanbanViewBtn = document.getElementById("kanbanViewBtn");
 const listView = document.getElementById("listView");
@@ -83,6 +103,8 @@ let activities = [];
 let currentView = "list";
 let editingTemplateIndex = null;
 let closings = [];
+let closingReviews = [];
+let dailyTemplates = [];
 
 const DEFAULT_TASKS = [
   "Prepare dinner service station",
@@ -192,12 +214,6 @@ function getLocalDateValue(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function getNextBusinessDate() {
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + 1);
-  return getLocalDateValue(nextDate);
-}
-
 function getTaskTemplates() {
   try {
     const stored = JSON.parse(localStorage.getItem(TASK_TEMPLATES_STORAGE_KEY) || "null");
@@ -268,6 +284,100 @@ function renderTaskTemplateList() {
   });
 
   if (!templates.length) taskTemplateList.textContent = "No task options. Add one above.";
+}
+
+function renderAccountSwitcher() {
+  accountSwitcher.innerHTML = "";
+  profiles.forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = `${profile.full_name} (${profile.role})`;
+    accountSwitcher.appendChild(option);
+  });
+  accountSwitcher.value = activeUser?.id || "";
+}
+
+function populateDailyTaskStaff() {
+  const selected = dailyTaskStaff.value;
+  dailyTaskStaff.innerHTML = '<option value="">Unassigned</option>';
+  getStaffProfiles().forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.full_name;
+    dailyTaskStaff.appendChild(option);
+  });
+  dailyTaskStaff.value = getProfileById(selected)?.role === "Staff" ? selected : "";
+}
+
+function resetDailyTaskForm() {
+  dailyTaskForm.reset();
+  dailyTaskId.value = "";
+  dailyTaskPriority.value = "Medium";
+  dailyTaskCategory.value = "Other";
+  dailyTaskDueOffset.value = "0";
+  populateDailyTaskStaff();
+  setMessage(dailyTaskFormMessage, "", "");
+}
+
+function renderDailyTaskOptions() {
+  dailyTaskOptions.innerHTML = "";
+  dailyTemplates.filter((template) => template.active).forEach((template) => {
+    const staffName = getProfileById(template.assigned_to)?.full_name || "Unassigned";
+    const label = document.createElement("label");
+    label.className = "daily-task-option";
+    label.innerHTML = `<input type="checkbox"><div><strong></strong><span></span></div>`;
+    label.querySelector("input").value = template.id;
+    label.querySelector("strong").textContent = template.title;
+    label.querySelector("span").textContent = `${staffName} | ${template.priority} | ${template.category}`;
+    dailyTaskOptions.appendChild(label);
+  });
+  if (!dailyTaskOptions.children.length) dailyTaskOptions.textContent = "No Daily Tasks yet. Add reusable assignments first.";
+}
+
+function renderDailyTaskManager() {
+  dailyTaskTemplateList.innerHTML = "";
+  dailyTemplates.forEach((template) => {
+    const row = document.createElement("div");
+    row.className = "template-row";
+    row.innerHTML = `<div><strong></strong><span></span></div><div></div>`;
+    row.querySelector("strong").textContent = template.title;
+    row.querySelector("span").textContent = `${getProfileById(template.assigned_to)?.full_name || "Unassigned"} | ${template.category}`;
+    const actions = row.lastElementChild;
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "secondary-btn small-btn";
+    editButton.textContent = "Edit";
+    editButton.addEventListener("click", () => {
+      dailyTaskId.value = template.id;
+      dailyTaskTitle.value = template.title;
+      dailyTaskDescription.value = template.description;
+      dailyTaskStaff.value = template.assigned_to || "";
+      dailyTaskPriority.value = template.priority;
+      dailyTaskCategory.value = template.category;
+      dailyTaskDueOffset.value = String(template.due_offset_days);
+      dailyTaskTitle.focus();
+    });
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "danger-btn small-btn";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", async () => {
+      const { error } = await supabaseClient.from("daily_task_templates").delete().eq("id", template.id);
+      if (error) return setMessage(dailyTaskFormMessage, "error", "Unable to delete this Daily Task.");
+      await loadDailyTemplates();
+      renderDailyTaskManager();
+      renderDailyTaskOptions();
+    });
+    actions.append(editButton, deleteButton);
+    dailyTaskTemplateList.appendChild(row);
+  });
+  if (!dailyTemplates.length) dailyTaskTemplateList.textContent = "No Daily Task templates have been created.";
+}
+
+function dateWithOffset(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + Number(days));
+  return getLocalDateValue(date);
 }
 
 function getCategoryIcon(category) {
@@ -435,17 +545,62 @@ function renderClosingHistory() {
   closings.forEach((closing) => {
     const item = document.createElement("div");
     item.className = "closing-history-row";
-    item.innerHTML = `<div><strong></strong><span></span></div><div class="closing-history-metrics"><span></span><span></span><span></span><span></span></div>`;
+    item.innerHTML = `<div><strong></strong><span></span></div><div class="closing-history-metrics"><span></span><span></span><span></span><span></span></div><div class="closing-history-details hidden"></div>`;
     item.querySelector("strong").textContent = formatEnglishDate(closing.business_date);
     item.querySelector("div > span").textContent = `Closed by ${closing.manager_name} at ${new Date(closing.closed_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
     const metrics = item.querySelectorAll(".closing-history-metrics span");
     metrics[0].textContent = `${closing.total_tasks} total`;
     metrics[1].textContent = `${closing.completed_tasks} completed`;
-    metrics[2].textContent = `${closing.carried_tasks} carried`;
-    metrics[3].textContent = `${closing.overdue_tasks} overdue`;
+    metrics[2].textContent = `${closing.issue_tasks || 0} issues`;
+    metrics[3].textContent = `${closing.no_issue_tasks || 0} no issue`;
+    const details = item.querySelector(".closing-history-details");
+    closingReviews.filter((review) => review.closing_id === closing.id).forEach((review) => {
+      const row = document.createElement("div");
+      row.className = "closing-history-task";
+      const outcomeClass = review.outcome.toLowerCase().replaceAll(" ", "-");
+      row.innerHTML = `<span class="outcome-badge ${outcomeClass}"></span><div><strong></strong><p></p></div><span></span>`;
+      row.querySelector(".outcome-badge").textContent = review.outcome;
+      row.querySelector("strong").textContent = review.task_title;
+      row.querySelector("p").textContent = review.note || "No follow-up note.";
+      row.querySelector("div + span").textContent = review.assigned_name;
+      details.appendChild(row);
+    });
+    item.addEventListener("click", () => details.classList.toggle("hidden"));
     closingHistoryList.appendChild(item);
   });
   if (!closings.length) closingHistoryList.textContent = "No business days have been closed yet.";
+}
+
+function renderClosingReviewList() {
+  closingReviewList.innerHTML = "";
+  tasks.forEach((task) => {
+    const item = document.createElement("div");
+    const staffName = getProfileById(task.assigned_to)?.full_name || "Unassigned";
+    item.className = `closing-review-item${task.status === "Done" ? " completed" : ""}`;
+    item.dataset.taskId = task.id;
+    item.innerHTML = `<div class="closing-review-meta"><strong></strong><span></span></div>`;
+    item.querySelector("strong").textContent = task.title;
+    item.querySelector("span").textContent = `${staffName} | ${task.status}`;
+    if (task.status === "Done") {
+      const badge = document.createElement("span");
+      badge.className = "outcome-badge";
+      badge.textContent = "Completed";
+      item.appendChild(badge);
+    } else {
+      const outcome = document.createElement("select");
+      outcome.className = "closing-outcome";
+      outcome.innerHTML = '<option value="">Choose result</option><option value="Issue">Issue</option><option value="No Issue">No Issue</option>';
+      const note = document.createElement("input");
+      note.className = "closing-note";
+      note.placeholder = "Reason (required for Issue)";
+      outcome.addEventListener("change", () => {
+        note.required = outcome.value === "Issue";
+        note.placeholder = outcome.value === "Issue" ? "Describe the issue (required)" : "Optional note";
+      });
+      item.append(outcome, note);
+    }
+    closingReviewList.appendChild(item);
+  });
 }
 
 function openCloseDayModal() {
@@ -454,46 +609,95 @@ function openCloseDayModal() {
   document.getElementById("closingCompleted").textContent = summary.completed;
   document.getElementById("closingCarried").textContent = summary.carried;
   document.getElementById("closingOverdue").textContent = summary.overdue;
+  renderClosingReviewList();
   setMessage(closeDayMessage, "", "");
-  confirmCloseDayBtn.disabled = closings.some((closing) => closing.business_date === getLocalDateValue());
-  if (confirmCloseDayBtn.disabled) setMessage(closeDayMessage, "info", "Today’s operations have already been closed.");
+  const alreadyClosed = closings.some((closing) => closing.business_date === getLocalDateValue());
+  confirmCloseDayBtn.disabled = alreadyClosed || tasks.length === 0;
+  if (alreadyClosed) setMessage(closeDayMessage, "info", "Today’s operations have already been closed.");
+  else if (!tasks.length) setMessage(closeDayMessage, "info", "There are no active tasks to close.");
   closeDayModal.classList.remove("hidden");
 }
 
-async function closeBusinessDay() {
+function collectClosingReviews() {
+  const rows = [];
+  for (const task of tasks) {
+    const item = closingReviewList.querySelector(`[data-task-id="${task.id}"]`);
+    const assignedName = getProfileById(task.assigned_to)?.full_name || "Unassigned";
+    let outcome = "Completed";
+    let note = "";
+    if (task.status !== "Done") {
+      outcome = item.querySelector(".closing-outcome").value;
+      note = item.querySelector(".closing-note").value.trim();
+      if (!outcome) throw new Error(`Classify "${task.title}" as Issue or No Issue.`);
+      if (outcome === "Issue" && !note) throw new Error(`Add an issue reason for "${task.title}".`);
+    }
+    rows.push({ task, assignedName, outcome, note });
+  }
+  return rows;
+}
+
+async function completeBusinessDay() {
   if (!isManager() || confirmCloseDayBtn.disabled) return;
-  confirmCloseDayBtn.disabled = true;
-  confirmCloseDayBtn.textContent = "Closing...";
-  const summary = getClosingSummary();
-  const closedAt = new Date().toISOString();
-
-  const completedResult = await supabaseClient.from("tasks").update({ archived_at: closedAt }).eq("status", "Done").is("archived_at", null);
-  const carriedResult = await supabaseClient.from("tasks").update({ status: "To Do", business_date: getNextBusinessDate() }).neq("status", "Done").is("archived_at", null);
-
-  if (completedResult.error || carriedResult.error) {
-    setMessage(closeDayMessage, "error", "Unable to reset today’s tasks. Please try again.");
-    confirmCloseDayBtn.disabled = false;
-    confirmCloseDayBtn.textContent = "Confirm Closing";
+  let reviews;
+  try {
+    reviews = collectClosingReviews();
+  } catch (error) {
+    setMessage(closeDayMessage, "error", error.message);
     return;
   }
 
-  const { error } = await supabaseClient.from("daily_closings").insert({
+  confirmCloseDayBtn.disabled = true;
+  confirmCloseDayBtn.textContent = "Closing...";
+  const summary = getClosingSummary();
+  const issueCount = reviews.filter((review) => review.outcome === "Issue").length;
+  const noIssueCount = reviews.filter((review) => review.outcome === "No Issue").length;
+  const { data: closing, error: closingError } = await supabaseClient.from("daily_closings").insert({
     business_date: getLocalDateValue(),
     manager_id: activeUser.id,
     manager_name: activeUser.full_name,
     total_tasks: summary.total,
     completed_tasks: summary.completed,
-    carried_tasks: summary.carried,
-    overdue_tasks: summary.overdue
-  });
+    carried_tasks: 0,
+    overdue_tasks: summary.overdue,
+    issue_tasks: issueCount,
+    no_issue_tasks: noIssueCount
+  }).select("id").single();
 
-  if (error) {
-    setMessage(closeDayMessage, "error", "Tasks were reset, but the closing summary could not be saved.");
+  if (closingError) {
+    setMessage(closeDayMessage, "error", "Unable to save the closing summary. No tasks were cleared.");
+    confirmCloseDayBtn.disabled = false;
     confirmCloseDayBtn.textContent = "Confirm Closing";
     return;
   }
 
-  await recordActivity("Closed today’s operations");
+  const reviewRows = reviews.map(({ task, assignedName, outcome, note }) => ({
+    closing_id: closing.id,
+    business_date: getLocalDateValue(),
+    task_id: task.id,
+    task_title: task.title,
+    assigned_to: task.assigned_to,
+    assigned_name: assignedName,
+    original_status: task.status,
+    outcome,
+    note,
+    manager_id: activeUser.id,
+    manager_name: activeUser.full_name
+  }));
+  const { error: reviewError } = await supabaseClient.from("closing_task_reviews").insert(reviewRows);
+  if (reviewError) {
+    setMessage(closeDayMessage, "error", "Closing summary saved, but task reviews could not be recorded.");
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  const { error: archiveError } = await supabaseClient.from("tasks").update({ archived_at: new Date().toISOString() }).is("archived_at", null);
+  if (archiveError) {
+    setMessage(closeDayMessage, "error", "Reviews were saved, but active tasks could not be cleared.");
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  await recordActivity("Closed today's operations");
   await loadTasks();
   await loadClosings();
   renderTasks();
@@ -747,12 +951,14 @@ function renderApp() {
 
   activeUserName.textContent = activeUser.full_name;
   activeUserRole.textContent = `Role: ${activeUser.role}`;
+  renderAccountSwitcher();
   boardSubtitle.textContent = isManager()
     ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
     : "Staff can only view tasks assigned to their own account and update their task status.";
   newTaskBtn.classList.toggle("hidden", !isManager());
   closeDayBtn.classList.toggle("hidden", !isManager());
   closingHistoryCard.classList.toggle("hidden", !isManager());
+  dailyTasksCard.classList.toggle("hidden", !isManager());
   closeTaskDrawer();
   workloadCard.classList.toggle("hidden", !isManager());
   mainGrid.classList.toggle("single-column", !isManager());
@@ -760,7 +966,10 @@ function renderApp() {
   renderStaffFilterOptions();
   renderTasks();
   renderActivities();
-  if (isManager()) renderClosingHistory();
+  if (isManager()) {
+    renderClosingHistory();
+    renderDailyTaskOptions();
+  }
   setTaskView(currentView);
 }
 
@@ -780,7 +989,7 @@ async function loadProfiles() {
 async function loadTasks() {
   const { data, error } = await supabaseClient
     .from("tasks")
-    .select("id, title, description, assigned_to, status, priority, category, due_date, business_date, archived_at, created_at")
+    .select("id, title, description, assigned_to, status, priority, category, due_date, business_date, archived_at, source_template_id, created_at")
     .is("archived_at", null)
     .order("created_at", { ascending: false });
 
@@ -808,17 +1017,43 @@ async function loadActivities() {
 async function loadClosings() {
   if (!isManager()) {
     closings = [];
+    closingReviews = [];
     return;
   }
 
   const { data, error } = await supabaseClient
     .from("daily_closings")
-    .select("id, business_date, manager_name, total_tasks, completed_tasks, carried_tasks, overdue_tasks, closed_at")
+    .select("id, business_date, manager_name, total_tasks, completed_tasks, carried_tasks, overdue_tasks, issue_tasks, no_issue_tasks, closed_at")
     .order("business_date", { ascending: false })
     .limit(10);
 
   if (error) throw error;
   closings = data || [];
+  const closingIds = closings.map((closing) => closing.id);
+  if (!closingIds.length) {
+    closingReviews = [];
+    return;
+  }
+  const { data: reviewData, error: reviewError } = await supabaseClient
+    .from("closing_task_reviews")
+    .select("closing_id, task_title, assigned_name, outcome, note, original_status")
+    .in("closing_id", closingIds)
+    .order("id");
+  if (reviewError) throw reviewError;
+  closingReviews = reviewData || [];
+}
+
+async function loadDailyTemplates() {
+  if (!isManager()) {
+    dailyTemplates = [];
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from("daily_task_templates")
+    .select("id, title, description, assigned_to, priority, category, due_offset_days, active, created_at")
+    .order("created_at");
+  if (error) throw error;
+  dailyTemplates = data || [];
 }
 
 function readLegacyTasks() {
@@ -885,6 +1120,7 @@ async function loadActiveUser(userId) {
   await loadTasks();
   await loadActivities();
   await loadClosings();
+  await loadDailyTemplates();
 }
 
 async function initializeApp() {
@@ -1077,6 +1313,8 @@ logoutBtn.addEventListener("click", async () => {
   tasks = [];
   activities = [];
   closings = [];
+  closingReviews = [];
+  dailyTemplates = [];
   editingTaskId = null;
   currentView = "list";
   loginForm.reset();
@@ -1230,13 +1468,114 @@ taskTemplateForm.addEventListener("submit", (event) => {
   renderTaskTemplateList();
   renderQuickTaskOptions();
 });
+accountSwitcher.addEventListener("change", async () => {
+  const target = getProfileById(accountSwitcher.value);
+  if (!target || target.id === activeUser?.id) return;
+  await supabaseClient.auth.signOut({ scope: "local" });
+  activeUser = null;
+  tasks = [];
+  activities = [];
+  closings = [];
+  closingReviews = [];
+  dailyTemplates = [];
+  renderApp();
+  switchAuthTab("login");
+  loginUsername.value = target.username;
+  loginPassword.value = "";
+  setMessage(authMessage, "info", `Enter the password for ${target.full_name} (${target.role}).`);
+  loginPassword.focus();
+});
+manageDailyTasksBtn.addEventListener("click", () => {
+  resetDailyTaskForm();
+  renderDailyTaskManager();
+  dailyTaskModal.classList.remove("hidden");
+  dailyTaskTitle.focus();
+});
+closeDailyTaskModalBtn.addEventListener("click", () => dailyTaskModal.classList.add("hidden"));
+dailyTaskModal.addEventListener("click", (event) => {
+  if (event.target === dailyTaskModal) dailyTaskModal.classList.add("hidden");
+});
+cancelDailyTaskEditBtn.addEventListener("click", resetDailyTaskForm);
+dailyTaskForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!isManager()) return;
+  const title = dailyTaskTitle.value.trim();
+  const assignedTo = dailyTaskStaff.value || null;
+  if (!title) return setMessage(dailyTaskFormMessage, "error", "Enter a Daily Task name.");
+  if (assignedTo && getProfileById(assignedTo)?.role !== "Staff") {
+    return setMessage(dailyTaskFormMessage, "error", "Select a registered Staff account or Unassigned.");
+  }
+  const row = {
+    title,
+    description: dailyTaskDescription.value.trim(),
+    assigned_to: assignedTo,
+    priority: dailyTaskPriority.value,
+    category: dailyTaskCategory.value,
+    due_offset_days: Number(dailyTaskDueOffset.value),
+    active: true,
+    created_by: activeUser.id
+  };
+  const request = dailyTaskId.value
+    ? supabaseClient.from("daily_task_templates").update(row).eq("id", dailyTaskId.value)
+    : supabaseClient.from("daily_task_templates").insert(row);
+  const { error } = await request;
+  if (error) return setMessage(dailyTaskFormMessage, "error", "Unable to save this Daily Task.");
+  await loadDailyTemplates();
+  resetDailyTaskForm();
+  renderDailyTaskManager();
+  renderDailyTaskOptions();
+  setMessage(dailyTaskFormMessage, "success", "Daily Task saved.");
+});
+generateDailyTasksBtn.addEventListener("click", async () => {
+  if (!isManager()) return;
+  const selectedIds = [...dailyTaskOptions.querySelectorAll("input:checked")].map((input) => input.value);
+  if (!selectedIds.length) return setMessage(dailyTaskMessage, "error", "Select at least one Daily Task.");
+  generateDailyTasksBtn.disabled = true;
+  const businessDate = getLocalDateValue();
+  const { data: existing, error: existingError } = await supabaseClient
+    .from("tasks")
+    .select("source_template_id")
+    .eq("business_date", businessDate)
+    .in("source_template_id", selectedIds);
+  if (existingError) {
+    generateDailyTasksBtn.disabled = false;
+    return setMessage(dailyTaskMessage, "error", "Unable to check today's Daily Tasks.");
+  }
+  const existingIds = new Set((existing || []).map((task) => task.source_template_id));
+  const templatesToCreate = dailyTemplates.filter((template) => selectedIds.includes(template.id) && !existingIds.has(template.id));
+  const rows = templatesToCreate.map((template) => ({
+    title: template.title,
+    description: template.description,
+    assigned_to: template.assigned_to,
+    status: "To Do",
+    priority: template.priority,
+    category: template.category,
+    due_date: dateWithOffset(template.due_offset_days),
+    business_date: businessDate,
+    source_template_id: template.id,
+    created_by: activeUser.id
+  }));
+  if (rows.length) {
+    const { error } = await supabaseClient.from("tasks").insert(rows);
+    if (error) {
+      generateDailyTasksBtn.disabled = false;
+      return setMessage(dailyTaskMessage, "error", "Unable to generate today's assignments.");
+    }
+    await recordActivity(`Generated ${rows.length} Daily Tasks`);
+    await loadTasks();
+    renderTasks();
+  }
+  const skipped = selectedIds.length - rows.length;
+  setMessage(dailyTaskMessage, "success", `${rows.length} task(s) added${skipped ? `; ${skipped} already existed today` : ""}.`);
+  generateDailyTasksBtn.disabled = false;
+});
 closeDayBtn.addEventListener("click", openCloseDayModal);
 closeCloseDayModalBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
 cancelCloseDayBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
 closeDayModal.addEventListener("click", (event) => {
   if (event.target === closeDayModal) closeDayModal.classList.add("hidden");
 });
-confirmCloseDayBtn.addEventListener("click", closeBusinessDay);
+confirmCloseDayBtn.addEventListener("click", completeBusinessDay);
 statusFilter.addEventListener("change", renderTasks);
 [priorityFilter, categoryFilter, staffFilter, overdueFilter].forEach((filter) => {
   filter.addEventListener("change", renderTasks);

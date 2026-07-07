@@ -1402,3 +1402,36 @@ body.drawer-open {
     flex-direction: column;
   }
 }
+
+/* Daily operations cycle */
+.account-actions { display: grid; grid-template-columns: minmax(180px, 250px) auto; gap: 8px; align-items: end; }
+.account-actions label { grid-column: 1 / -1; color: var(--muted); font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.account-actions select { min-height: 42px; }
+.daily-tasks-card { margin-bottom: 18px; }
+.daily-task-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.daily-task-option { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); cursor: pointer; }
+.daily-task-option:has(input:checked) { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(245, 158, 11, .14); }
+.daily-task-option strong, .daily-task-option span { display: block; }
+.daily-task-option span { margin-top: 4px; color: var(--muted); font-size: .82rem; }
+.daily-task-footer { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-top: 14px; }
+.daily-task-footer .status-message { flex: 1; margin: 0; }
+.daily-task-dialog { width: min(820px, calc(100vw - 28px)); }
+.daily-task-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.closing-review-list { display: grid; gap: 10px; max-height: 42vh; overflow: auto; margin: 16px 0; }
+.closing-review-item { display: grid; grid-template-columns: minmax(190px, 1.2fr) minmax(150px, .7fr) minmax(220px, 1.3fr); gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+.closing-review-item.completed { grid-template-columns: 1fr auto; border-color: rgba(45, 133, 91, .3); }
+.closing-review-meta strong, .closing-review-meta span { display: block; }
+.closing-review-meta span { margin-top: 4px; color: var(--muted); font-size: .82rem; }
+.closing-history-row { cursor: pointer; }
+.closing-history-details { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.closing-history-details.hidden { display: none; }
+.closing-history-task { display: grid; grid-template-columns: 90px 1fr 130px; gap: 10px; align-items: center; font-size: .84rem; }
+.outcome-badge { display: inline-flex; justify-content: center; padding: 5px 8px; border-radius: 999px; background: #e6efe9; color: #276548; font-weight: 800; }
+.outcome-badge.issue { background: #f9e2dd; color: #9b3424; }
+.outcome-badge.no-issue { background: #fff1cc; color: #865f00; }
+
+@media (max-width: 760px) {
+  .account-actions, .daily-task-form, .closing-review-item, .closing-review-item.completed, .closing-history-task { grid-template-columns: 1fr; }
+  .account-actions label { grid-column: auto; }
+  .daily-task-footer { align-items: stretch; flex-direction: column; }
+}

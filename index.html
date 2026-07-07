@@ -81,8 +81,11 @@
           <h2 id="activeUserName">-</h2>
           <p id="activeUserRole" class="session-role">Role: -</p>
         </div>
-
-        <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
+        <div class="account-actions">
+          <label for="accountSwitcher">Switch account</label>
+          <select id="accountSwitcher" aria-label="Choose another account"></select>
+          <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
+        </div>
       </section>
 
       <nav class="workspace-nav" aria-label="Task view">
@@ -97,6 +100,18 @@
         <div><strong id="doneAnalytics">0</strong><span>Done</span></div>
         <div><strong id="overdueAnalytics">0</strong><span>Overdue</span></div>
         <div><strong id="highAnalytics">0</strong><span>High Priority</span></div>
+      </section>
+
+      <section id="dailyTasksCard" class="card daily-tasks-card hidden">
+        <div class="section-heading">
+          <div><h2>Daily Tasks</h2><p>Select reusable work and create today's assignments in one action.</p></div>
+          <button type="button" id="manageDailyTasksBtn" class="secondary-btn">Manage Daily Tasks</button>
+        </div>
+        <div id="dailyTaskOptions" class="daily-task-options"></div>
+        <div class="daily-task-footer">
+          <p id="dailyTaskMessage" class="status-message hidden"></p>
+          <button type="button" id="generateDailyTasksBtn" class="primary-btn">Add Selected to Today</button>
+        </div>
       </section>
 
       <main id="mainGrid" class="main-grid">
@@ -257,19 +272,41 @@
         <div><p class="drawer-kicker">End of day</p><h2>Close Today’s Operations</h2></div>
         <button type="button" id="closeCloseDayModalBtn" class="drawer-close" aria-label="Close summary">×</button>
       </div>
-      <p class="closing-intro">Completed tasks will be archived. Unfinished tasks will move to the next business day as To Do.</p>
+      <p class="closing-intro">Review every unfinished task. After confirmation, all of today's tasks will be archived and the active workspace will be cleared.</p>
       <div class="closing-summary">
         <div><strong id="closingTotal">0</strong><span>Total</span></div>
         <div><strong id="closingCompleted">0</strong><span>Completed</span></div>
-        <div><strong id="closingCarried">0</strong><span>Carry Forward</span></div>
+        <div><strong id="closingCarried">0</strong><span>Needs Review</span></div>
         <div><strong id="closingOverdue">0</strong><span>Overdue</span></div>
       </div>
+      <div id="closingReviewList" class="closing-review-list"></div>
       <div id="closeDayMessage" class="status-message hidden"></div>
       <div class="closing-warning"><strong>This action cannot be undone.</strong><span>Review the figures before confirming.</span></div>
       <div class="button-row closing-actions">
         <button type="button" id="cancelCloseDayBtn" class="secondary-btn">Cancel</button>
         <button type="button" id="confirmCloseDayBtn" class="primary-btn">Confirm Closing</button>
       </div>
+    </div>
+  </section>
+
+  <section id="dailyTaskModal" class="template-modal hidden" aria-label="Manage daily tasks">
+    <div class="template-dialog daily-task-dialog">
+      <div class="drawer-header">
+        <div><p class="drawer-kicker">Reusable assignments</p><h2>Manage Daily Tasks</h2></div>
+        <button type="button" id="closeDailyTaskModalBtn" class="drawer-close" aria-label="Close daily task manager">X</button>
+      </div>
+      <form id="dailyTaskForm" class="daily-task-form">
+        <input type="hidden" id="dailyTaskId" />
+        <div class="form-field form-field-wide"><label for="dailyTaskTitle">Task name</label><input type="text" id="dailyTaskTitle" maxlength="100" required /></div>
+        <div class="form-field form-field-wide"><label for="dailyTaskDescription">Instructions</label><textarea id="dailyTaskDescription"></textarea></div>
+        <div class="form-field"><label for="dailyTaskStaff">Default Staff</label><select id="dailyTaskStaff"></select></div>
+        <div class="form-field"><label for="dailyTaskPriority">Priority</label><select id="dailyTaskPriority"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+        <div class="form-field"><label for="dailyTaskCategory">Category</label><select id="dailyTaskCategory"><option>Kitchen Preparation</option><option>Cleaning</option><option>Inventory</option><option>Service Setup</option><option>Maintenance</option><option selected>Other</option></select></div>
+        <div class="form-field"><label for="dailyTaskDueOffset">Due in</label><select id="dailyTaskDueOffset"><option value="0">Today</option><option value="1">Tomorrow</option><option value="2">In 2 days</option><option value="7">In 7 days</option></select></div>
+        <div class="button-row form-field-wide"><button type="submit" class="primary-btn">Save Daily Task</button><button type="button" id="cancelDailyTaskEditBtn" class="secondary-btn">Clear</button></div>
+      </form>
+      <p id="dailyTaskFormMessage" class="status-message hidden"></p>
+      <div id="dailyTaskTemplateList" class="template-list"></div>
     </div>
   </section>
 
