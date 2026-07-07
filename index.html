@@ -16,11 +16,12 @@
         <p>Plan daily work, assign staff, monitor progress, and keep every shift accountable.</p>
       </div>
       <nav id="sideNav" class="side-nav hidden" aria-label="Workspace navigation">
-        <a href="#analyticsSection"><span>◆</span>Overview</a>
-        <a href="#listView"><span>☷</span>Tasks</a>
-        <a href="#kanbanView"><span>▦</span>Board</a>
-        <a href="#workloadCard"><span>◉</span>Team</a>
-        <a href="#activityCard"><span>↻</span>Activity</a>
+        <a href="#analyticsSection" data-section="analyticsSection"><span>◆</span>Overview</a>
+        <a href="#listView" data-section="listView" data-view="list"><span>☷</span>Tasks</a>
+        <a href="#kanbanView" data-section="kanbanView" data-view="kanban"><span>▦</span>Board</a>
+        <a href="#workloadCard" data-section="workloadCard"><span>◉</span>Team</a>
+        <a href="#activityCard" data-section="activityCard"><span>↻</span>Activity</a>
+        <a href="#closingHistoryCard" data-section="closingHistoryCard"><span>▣</span>History</a>
       </nav>
     </header>
 
@@ -70,6 +71,7 @@
       <section class="app-topbar">
         <div><p class="eyebrow dark">Live workspace</p><h2>Restaurant Operations</h2></div>
         <div class="topbar-actions">
+          <button type="button" id="openOperationsBtn" class="primary-btn hidden"><span>▶</span> Open Operations</button>
           <button type="button" id="closeDayBtn" class="close-day-btn hidden"><span>✓</span> Close Today</button>
           <button type="button" id="newTaskBtn" class="new-task-btn hidden"><span>+</span> New Task</button>
         </div>
@@ -80,6 +82,11 @@
           <p class="session-label">Active User</p>
           <h2 id="activeUserName">-</h2>
           <p id="activeUserRole" class="session-role">Role: -</p>
+        </div>
+        <div class="operation-state">
+          <p class="session-label">Operations Status</p>
+          <strong id="operationStatus">Closed</strong>
+          <span id="operationStatusDetail">Waiting for Manager to open operations.</span>
         </div>
         <div class="account-actions">
           <label for="accountSwitcher">Switch account</label>

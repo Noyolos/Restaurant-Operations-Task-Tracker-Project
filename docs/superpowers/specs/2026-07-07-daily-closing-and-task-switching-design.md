@@ -4,6 +4,10 @@
 
 Create a complete daily restaurant operations cycle. Managers must review unfinished work before closing, all tasks must leave the active dashboard after closing, and reusable daily task sets must be available for fast assignment.
 
+## Operations Lifecycle
+
+The system has one restaurant-wide `Open` or `Closed` state. A Manager opens operations before tasks can be created or updated. Closing operations archives the current work and changes the state to `Closed`. A Manager may open operations again on the same calendar date; an internal cycle number separates the records without exposing shift terminology to users.
+
 ## End-of-Day Review
 
 When a Manager selects **Close Today**, the system displays every active task. Completed tasks require no additional input. Every `To Do` or `In Progress` task must be classified before closing:
@@ -31,7 +35,7 @@ Staff cannot access closing history or other Staff performance records.
 
 Managers can maintain reusable Daily Task templates. A template stores task title, description, default Staff assignment, priority, category, due-date rule, and active state.
 
-The Daily Tasks panel allows a Manager to select one or more templates and create the selected tasks for the current business date. Existing tasks with the same template and business date are not created twice. Managers can still edit the generated tasks normally.
+The Daily Tasks panel allows a Manager to select one or more templates and create the selected tasks for the current operating cycle. Existing tasks with the same template and cycle are not created twice. Managers can still edit the generated tasks normally.
 
 ## Account Switching
 

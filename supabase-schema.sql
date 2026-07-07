@@ -9,6 +9,20 @@ create table if not exists public.profiles (
 create unique index if not exists profiles_username_lower_idx
   on public.profiles (lower(username));
 
+create table if not exists public.restaurant_operations (
+  id integer primary key default 1 check (id = 1),
+  is_open boolean not null default false,
+  operation_cycle integer not null default 0,
+  business_date date not null default current_date,
+  opened_at timestamptz,
+  opened_by uuid references public.profiles(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.restaurant_operations (id)
+values (1)
+on conflict (id) do nothing;
+
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
   title text not null check (length(trim(title)) > 0),
@@ -24,7 +38,8 @@ alter table public.tasks
   add column if not exists category text not null default 'Other',
   add column if not exists due_date date,
   add column if not exists business_date date not null default current_date,
-  add column if not exists archived_at timestamptz;
+  add column if not exists archived_at timestamptz,
+  add column if not exists operation_cycle integer not null default 1;
 
 alter table public.tasks drop constraint if exists tasks_priority_check;
 alter table public.tasks add constraint tasks_priority_check
@@ -57,7 +72,12 @@ create table if not exists public.daily_closings (
 
 alter table public.daily_closings
   add column if not exists issue_tasks integer not null default 0,
-  add column if not exists no_issue_tasks integer not null default 0;
+  add column if not exists no_issue_tasks integer not null default 0,
+  add column if not exists operation_cycle integer not null default 1,
+  add column if not exists opened_at timestamptz;
+
+alter table public.daily_closings
+  drop constraint if exists daily_closings_business_date_key;
 
 create table if not exists public.daily_task_templates (
   id uuid primary key default gen_random_uuid(),
@@ -75,8 +95,9 @@ create table if not exists public.daily_task_templates (
 alter table public.tasks
   add column if not exists source_template_id uuid references public.daily_task_templates(id) on delete set null;
 
-create unique index if not exists tasks_daily_template_date_idx
-  on public.tasks (source_template_id, business_date)
+drop index if exists public.tasks_daily_template_date_idx;
+create unique index if not exists tasks_daily_template_cycle_idx
+  on public.tasks (source_template_id, business_date, operation_cycle)
   where source_template_id is not null;
 
 create table if not exists public.closing_task_reviews (
@@ -94,6 +115,9 @@ create table if not exists public.closing_task_reviews (
   manager_name text not null,
   created_at timestamptz not null default now()
 );
+
+alter table public.closing_task_reviews
+  add column if not exists operation_cycle integer not null default 1;
 
 create schema if not exists private;
 
@@ -162,6 +186,7 @@ create trigger protect_staff_task_updates
   for each row execute function private.protect_staff_task_updates();
 
 alter table public.profiles enable row level security;
+alter table public.restaurant_operations enable row level security;
 alter table public.tasks enable row level security;
 alter table public.activity_log enable row level security;
 alter table public.daily_closings enable row level security;
@@ -233,6 +258,23 @@ create policy "Authenticated users can view activity"
   to authenticated
   using (true);
 
+drop policy if exists "Authenticated users can view operations" on public.restaurant_operations;
+create policy "Authenticated users can view operations"
+  on public.restaurant_operations for select
+  to authenticated
+  using (true);
+
+drop policy if exists "Managers can update operations" on public.restaurant_operations;
+create policy "Managers can update operations"
+  on public.restaurant_operations for update
+  to authenticated
+  using (
+    exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'Manager')
+  )
+  with check (
+    exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'Manager')
+  );
+
 drop policy if exists "Users can record own activity" on public.activity_log;
 create policy "Users can record own activity"
   on public.activity_log for insert
@@ -287,6 +329,7 @@ create policy "Managers can create closing reviews"
 
 grant usage on schema public to authenticated;
 grant select on public.profiles to authenticated;
+grant select, update on public.restaurant_operations to authenticated;
 grant select, insert, update, delete on public.tasks to authenticated;
 grant select, insert on public.activity_log to authenticated;
 grant usage, select on sequence public.activity_log_id_seq to authenticated;

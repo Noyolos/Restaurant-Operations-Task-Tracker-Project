@@ -26,6 +26,9 @@ const activeUserName = document.getElementById("activeUserName");
 const activeUserRole = document.getElementById("activeUserRole");
 const accountSwitcher = document.getElementById("accountSwitcher");
 const logoutBtn = document.getElementById("logoutBtn");
+const openOperationsBtn = document.getElementById("openOperationsBtn");
+const operationStatus = document.getElementById("operationStatus");
+const operationStatusDetail = document.getElementById("operationStatusDetail");
 const boardSubtitle = document.getElementById("boardSubtitle");
 const taskFormCard = document.getElementById("taskFormCard");
 const taskForm = document.getElementById("taskForm");
@@ -105,6 +108,7 @@ let editingTemplateIndex = null;
 let closings = [];
 let closingReviews = [];
 let dailyTemplates = [];
+let operationsState = null;
 
 const DEFAULT_TASKS = [
   "Prepare dinner service station",
@@ -129,6 +133,10 @@ function isValidUsername(username) {
 
 function isManager() {
   return activeUser && activeUser.role === "Manager";
+}
+
+function isOperationsOpen() {
+  return Boolean(operationsState?.is_open);
 }
 
 function setMessage(element, type, text) {
@@ -547,7 +555,9 @@ function renderClosingHistory() {
     item.className = "closing-history-row";
     item.innerHTML = `<div><strong></strong><span></span></div><div class="closing-history-metrics"><span></span><span></span><span></span><span></span></div><div class="closing-history-details hidden"></div>`;
     item.querySelector("strong").textContent = formatEnglishDate(closing.business_date);
-    item.querySelector("div > span").textContent = `Closed by ${closing.manager_name} at ${new Date(closing.closed_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+    const openedTime = closing.opened_at ? new Date(closing.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "Not recorded";
+    const closedTime = new Date(closing.closed_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    item.querySelector("div > span").textContent = `Opened ${openedTime} | Closed ${closedTime} by ${closing.manager_name}`;
     const metrics = item.querySelectorAll(".closing-history-metrics span");
     metrics[0].textContent = `${closing.total_tasks} total`;
     metrics[1].textContent = `${closing.completed_tasks} completed`;
@@ -611,10 +621,8 @@ function openCloseDayModal() {
   document.getElementById("closingOverdue").textContent = summary.overdue;
   renderClosingReviewList();
   setMessage(closeDayMessage, "", "");
-  const alreadyClosed = closings.some((closing) => closing.business_date === getLocalDateValue());
-  confirmCloseDayBtn.disabled = alreadyClosed || tasks.length === 0;
-  if (alreadyClosed) setMessage(closeDayMessage, "info", "Today’s operations have already been closed.");
-  else if (!tasks.length) setMessage(closeDayMessage, "info", "There are no active tasks to close.");
+  confirmCloseDayBtn.disabled = !isOperationsOpen() || tasks.length === 0;
+  if (!tasks.length) setMessage(closeDayMessage, "info", "There are no active tasks to close.");
   closeDayModal.classList.remove("hidden");
 }
 
@@ -636,6 +644,36 @@ function collectClosingReviews() {
   return rows;
 }
 
+async function openOperations() {
+  if (!isManager() || isOperationsOpen()) return;
+  openOperationsBtn.disabled = true;
+  openOperationsBtn.textContent = "Opening...";
+  const openedAt = new Date().toISOString();
+  const { error } = await supabaseClient
+    .from("restaurant_operations")
+    .update({
+      is_open: true,
+      operation_cycle: operationsState.operation_cycle + 1,
+      business_date: getLocalDateValue(),
+      opened_at: openedAt,
+      opened_by: activeUser.id,
+      updated_at: openedAt
+    })
+    .eq("id", 1);
+  if (error) {
+    setMessage(authMessage, "error", "Unable to open restaurant operations.");
+    openOperationsBtn.disabled = false;
+    openOperationsBtn.innerHTML = "<span>▶</span> Open Operations";
+    return;
+  }
+  await loadOperations();
+  await loadTasks();
+  await recordActivity("Opened restaurant operations");
+  renderApp();
+  openOperationsBtn.disabled = false;
+  openOperationsBtn.innerHTML = "<span>▶</span> Open Operations";
+}
+
 async function completeBusinessDay() {
   if (!isManager() || confirmCloseDayBtn.disabled) return;
   let reviews;
@@ -652,7 +690,9 @@ async function completeBusinessDay() {
   const issueCount = reviews.filter((review) => review.outcome === "Issue").length;
   const noIssueCount = reviews.filter((review) => review.outcome === "No Issue").length;
   const { data: closing, error: closingError } = await supabaseClient.from("daily_closings").insert({
-    business_date: getLocalDateValue(),
+    business_date: operationsState.business_date,
+    operation_cycle: operationsState.operation_cycle,
+    opened_at: operationsState.opened_at,
     manager_id: activeUser.id,
     manager_name: activeUser.full_name,
     total_tasks: summary.total,
@@ -672,7 +712,8 @@ async function completeBusinessDay() {
 
   const reviewRows = reviews.map(({ task, assignedName, outcome, note }) => ({
     closing_id: closing.id,
-    business_date: getLocalDateValue(),
+    business_date: operationsState.business_date,
+    operation_cycle: operationsState.operation_cycle,
     task_id: task.id,
     task_title: task.title,
     assigned_to: task.assigned_to,
@@ -690,20 +731,34 @@ async function completeBusinessDay() {
     return;
   }
 
-  const { error: archiveError } = await supabaseClient.from("tasks").update({ archived_at: new Date().toISOString() }).is("archived_at", null);
+  const { error: archiveError } = await supabaseClient
+    .from("tasks")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("operation_cycle", operationsState.operation_cycle)
+    .is("archived_at", null);
   if (archiveError) {
     setMessage(closeDayMessage, "error", "Reviews were saved, but active tasks could not be cleared.");
     confirmCloseDayBtn.textContent = "Confirm Closing";
     return;
   }
 
+  const { error: stateError } = await supabaseClient
+    .from("restaurant_operations")
+    .update({ is_open: false, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (stateError) {
+    setMessage(closeDayMessage, "error", "Tasks were closed, but the operations status could not be updated.");
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
   await recordActivity("Closed today's operations");
+  await loadOperations();
   await loadTasks();
   await loadClosings();
-  renderTasks();
-  renderClosingHistory();
   closeDayModal.classList.add("hidden");
   confirmCloseDayBtn.textContent = "Confirm Closing";
+  renderApp();
 }
 
 function setTaskView(view) {
@@ -716,7 +771,7 @@ function setTaskView(view) {
 }
 
 function openTaskDrawer() {
-  if (!isManager()) return;
+  if (!isManager() || !isOperationsOpen()) return;
   taskFormCard.classList.remove("hidden");
   taskDrawerBackdrop.classList.remove("hidden");
   document.body.classList.add("drawer-open");
@@ -803,7 +858,7 @@ function updateStats() {
 }
 
 function canChangeTaskStatus(task) {
-  return isManager() || task.assigned_to === activeUser?.id;
+  return isOperationsOpen() && (isManager() || task.assigned_to === activeUser?.id);
 }
 
 function renderTasks() {
@@ -952,13 +1007,21 @@ function renderApp() {
   activeUserName.textContent = activeUser.full_name;
   activeUserRole.textContent = `Role: ${activeUser.role}`;
   renderAccountSwitcher();
-  boardSubtitle.textContent = isManager()
-    ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
-    : "Staff can only view tasks assigned to their own account and update their task status.";
-  newTaskBtn.classList.toggle("hidden", !isManager());
-  closeDayBtn.classList.toggle("hidden", !isManager());
+  operationStatus.textContent = isOperationsOpen() ? "Open" : "Closed";
+  operationStatus.classList.toggle("is-open", isOperationsOpen());
+  operationStatusDetail.textContent = isOperationsOpen()
+    ? `Opened ${new Date(operationsState.opened_at).toLocaleString("en-GB")}`
+    : "Waiting for Manager to open operations.";
+  boardSubtitle.textContent = !isOperationsOpen()
+    ? "Operations are closed. Open operations to begin assigning today's work."
+    : isManager()
+      ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
+      : "Staff can only view tasks assigned to their own account and update their task status.";
+  openOperationsBtn.classList.toggle("hidden", !isManager() || isOperationsOpen());
+  newTaskBtn.classList.toggle("hidden", !isManager() || !isOperationsOpen());
+  closeDayBtn.classList.toggle("hidden", !isManager() || !isOperationsOpen());
   closingHistoryCard.classList.toggle("hidden", !isManager());
-  dailyTasksCard.classList.toggle("hidden", !isManager());
+  dailyTasksCard.classList.toggle("hidden", !isManager() || !isOperationsOpen());
   closeTaskDrawer();
   workloadCard.classList.toggle("hidden", !isManager());
   mainGrid.classList.toggle("single-column", !isManager());
@@ -986,11 +1049,22 @@ async function loadProfiles() {
   profiles = data || [];
 }
 
+async function loadOperations() {
+  const { data, error } = await supabaseClient
+    .from("restaurant_operations")
+    .select("id, is_open, operation_cycle, business_date, opened_at, opened_by, updated_at")
+    .eq("id", 1)
+    .single();
+  if (error) throw error;
+  operationsState = data;
+}
+
 async function loadTasks() {
   const { data, error } = await supabaseClient
     .from("tasks")
-    .select("id, title, description, assigned_to, status, priority, category, due_date, business_date, archived_at, source_template_id, created_at")
+    .select("id, title, description, assigned_to, status, priority, category, due_date, business_date, operation_cycle, archived_at, source_template_id, created_at")
     .is("archived_at", null)
+    .eq("operation_cycle", operationsState.operation_cycle)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -1020,11 +1094,10 @@ async function loadClosings() {
     closingReviews = [];
     return;
   }
-
   const { data, error } = await supabaseClient
     .from("daily_closings")
-    .select("id, business_date, manager_name, total_tasks, completed_tasks, carried_tasks, overdue_tasks, issue_tasks, no_issue_tasks, closed_at")
-    .order("business_date", { ascending: false })
+    .select("id, business_date, operation_cycle, opened_at, manager_name, total_tasks, completed_tasks, carried_tasks, overdue_tasks, issue_tasks, no_issue_tasks, closed_at")
+    .order("closed_at", { ascending: false })
     .limit(10);
 
   if (error) throw error;
@@ -1093,7 +1166,9 @@ async function migrateLegacyTasks() {
         priority: VALID_PRIORITIES.includes(task.priority) ? task.priority : "Medium",
         category: VALID_CATEGORIES.includes(task.category) ? task.category : "Other",
         due_date: isValidDateValue(task.dueDate) ? task.dueDate || null : null,
-        created_by: activeUser.id
+        created_by: activeUser.id,
+        business_date: operationsState.business_date,
+        operation_cycle: operationsState.operation_cycle
       };
     });
 
@@ -1116,6 +1191,7 @@ async function loadActiveUser(userId) {
     throw new Error("No profile was found for this account.");
   }
 
+  await loadOperations();
   await migrateLegacyTasks();
   await loadTasks();
   await loadActivities();
@@ -1315,6 +1391,7 @@ logoutBtn.addEventListener("click", async () => {
   closings = [];
   closingReviews = [];
   dailyTemplates = [];
+  operationsState = null;
   editingTaskId = null;
   currentView = "list";
   loginForm.reset();
@@ -1328,6 +1405,10 @@ taskForm.addEventListener("submit", async (event) => {
 
   if (!isManager()) {
     setMessage(taskMessage, "error", "Only managers can create or edit tasks.");
+    return;
+  }
+  if (!isOperationsOpen()) {
+    setMessage(taskMessage, "error", "Open restaurant operations before managing tasks.");
     return;
   }
 
@@ -1383,7 +1464,12 @@ taskForm.addEventListener("submit", async (event) => {
 
   const result = editingTaskId
     ? await supabaseClient.from("tasks").update(taskData).eq("id", editingTaskId)
-    : await supabaseClient.from("tasks").insert({ ...taskData, created_by: activeUser.id });
+    : await supabaseClient.from("tasks").insert({
+        ...taskData,
+        created_by: activeUser.id,
+        business_date: operationsState.business_date,
+        operation_cycle: operationsState.operation_cycle
+      });
 
   if (result.error) {
     setMessage(taskMessage, "error", "Unable to save the task.");
@@ -1478,6 +1564,7 @@ accountSwitcher.addEventListener("change", async () => {
   closings = [];
   closingReviews = [];
   dailyTemplates = [];
+  operationsState = null;
   renderApp();
   switchAuthTab("login");
   loginUsername.value = target.username;
@@ -1528,14 +1615,16 @@ dailyTaskForm.addEventListener("submit", async (event) => {
 });
 generateDailyTasksBtn.addEventListener("click", async () => {
   if (!isManager()) return;
+  if (!isOperationsOpen()) return setMessage(dailyTaskMessage, "error", "Open operations before adding Daily Tasks.");
   const selectedIds = [...dailyTaskOptions.querySelectorAll("input:checked")].map((input) => input.value);
   if (!selectedIds.length) return setMessage(dailyTaskMessage, "error", "Select at least one Daily Task.");
   generateDailyTasksBtn.disabled = true;
-  const businessDate = getLocalDateValue();
+  const businessDate = operationsState.business_date;
   const { data: existing, error: existingError } = await supabaseClient
     .from("tasks")
     .select("source_template_id")
     .eq("business_date", businessDate)
+    .eq("operation_cycle", operationsState.operation_cycle)
     .in("source_template_id", selectedIds);
   if (existingError) {
     generateDailyTasksBtn.disabled = false;
@@ -1552,6 +1641,7 @@ generateDailyTasksBtn.addEventListener("click", async () => {
     category: template.category,
     due_date: dateWithOffset(template.due_offset_days),
     business_date: businessDate,
+    operation_cycle: operationsState.operation_cycle,
     source_template_id: template.id,
     created_by: activeUser.id
   }));
@@ -1569,6 +1659,7 @@ generateDailyTasksBtn.addEventListener("click", async () => {
   setMessage(dailyTaskMessage, "success", `${rows.length} task(s) added${skipped ? `; ${skipped} already existed today` : ""}.`);
   generateDailyTasksBtn.disabled = false;
 });
+openOperationsBtn.addEventListener("click", openOperations);
 closeDayBtn.addEventListener("click", openCloseDayModal);
 closeCloseDayModalBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
 cancelCloseDayBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
@@ -1590,6 +1681,16 @@ clearFiltersBtn.addEventListener("click", () => {
 });
 listViewBtn.addEventListener("click", () => setTaskView("list"));
 kanbanViewBtn.addEventListener("click", () => setTaskView("kanban"));
+sideNav.querySelectorAll("a[data-section]").forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (link.dataset.view) setTaskView(link.dataset.view);
+    requestAnimationFrame(() => {
+      const target = document.getElementById(link.dataset.section);
+      if (target && !target.classList.contains("hidden")) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+});
 
 switchAuthTab("login");
 initializeApp();
