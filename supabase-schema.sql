@@ -151,17 +151,17 @@ language plpgsql
 set search_path = ''
 as $$
 declare
-  current_role text;
+  v_role text;
 begin
   if pg_trigger_depth() > 1 then
     return new;
   end if;
 
-  select role into current_role
+  select role into v_role
   from public.profiles
   where id = auth.uid();
 
-  if current_role <> 'Manager' and (
+  if v_role is distinct from 'Manager' and (
     new.title is distinct from old.title or
     new.description is distinct from old.description or
     new.assigned_to is distinct from old.assigned_to or
