@@ -181,21 +181,21 @@ The Product Backlog contains the user stories planned for the three Project iter
 
 | ID | User Story | Priority | Iteration | Status |
 |---|---|---|---|---|
-| US01 | As a new user, I want to register an account so that I can access the restaurant task tracker. | High | Iteration 1 | ⏳ Planned |
-| US02 | As a user, I want to log in and log out so that I can access the system using my account. | High | Iteration 1 | ⏳ Planned |
-| US03 | As a user, I want the system to identify my role so that I receive the correct permissions. | High | Iteration 1 | ⏳ Planned |
-| US04 | As a staff member, I want to view tasks assigned to me so that I can focus on my responsibilities. | High | Iteration 1 | ⏳ Planned |
-| US05 | As a manager, I want to assign tasks to registered staff members so that responsibility is clear. | High | Iteration 1 | ⏳ Planned |
-| US06 | As a manager, I want to set task priority so that urgent duties can be completed first. | Medium | Iteration 2 | ⏳ Planned |
-| US07 | As a manager, I want to add task categories so that restaurant duties can be organised clearly. | Medium | Iteration 2 | ⏳ Planned |
-| US08 | As a manager, I want to set a due date so that staff know when tasks must be completed. | Medium | Iteration 2 | ⏳ Planned |
-| US09 | As a user, I want to filter tasks using different conditions so that I can find relevant tasks quickly. | Medium | Iteration 2 | ⏳ Planned |
-| US10 | As a user, I want clear validation messages so that incorrect task information can be corrected. | Medium | Iteration 2 | ⏳ Planned |
-| US11 | As a user, I want to view tasks on a Kanban board so that task progress is easier to understand. | Medium | Iteration 3 | ⏳ Planned |
-| US12 | As a manager, I want to view dashboard analytics so that I can monitor task completion. | Medium | Iteration 3 | ⏳ Planned |
-| US13 | As a manager, I want to view staff workload so that tasks can be assigned fairly. | Medium | Iteration 3 | ⏳ Planned |
-| US14 | As a manager, I want to view an activity log so that important task changes can be reviewed. | Medium | Iteration 3 | ⏳ Planned |
-| US15 | As a user, I want an improved responsive interface so that the system remains usable on different screen sizes. | Low | Iteration 3 | ⏳ Planned |
+| US01 | As a new user, I want to register an account so that I can access the restaurant task tracker. | High | Iteration 1 | ✅ Done |
+| US02 | As a user, I want to log in and log out so that I can access the system using my account. | High | Iteration 1 | ✅ Done |
+| US03 | As a user, I want the system to identify my role so that I receive the correct permissions. | High | Iteration 1 | ✅ Done |
+| US04 | As a staff member, I want to view tasks assigned to me so that I can focus on my responsibilities. | High | Iteration 1 | ✅ Done |
+| US05 | As a manager, I want to assign tasks to registered staff members so that responsibility is clear. | High | Iteration 1 | ✅ Done |
+| US06 | As a manager, I want to set task priority so that urgent duties can be completed first. | Medium | Iteration 2 | ✅ Done |
+| US07 | As a manager, I want to add task categories so that restaurant duties can be organised clearly. | Medium | Iteration 2 | ✅ Done |
+| US08 | As a manager, I want to set a due date so that staff know when tasks must be completed. | Medium | Iteration 2 | ✅ Done |
+| US09 | As a user, I want to filter tasks using different conditions so that I can find relevant tasks quickly. | Medium | Iteration 2 | ✅ Done |
+| US10 | As a user, I want clear validation messages so that incorrect task information can be corrected. | Medium | Iteration 2 | ✅ Done |
+| US11 | As a user, I want to view tasks on a Kanban board so that task progress is easier to understand. | Medium | Iteration 3 | ✅ Done |
+| US12 | As a manager, I want to view dashboard analytics so that I can monitor task completion. | Medium | Iteration 3 | ✅ Done |
+| US13 | As a manager, I want to view staff workload so that tasks can be assigned fairly. | Medium | Iteration 3 | ✅ Done |
+| US14 | As a manager, I want to view an activity log so that important task changes can be reviewed. | Medium | Iteration 3 | ✅ Done |
+| US15 | As a user, I want an improved responsive interface so that the system remains usable on different screen sizes. | Low | Iteration 3 | ✅ Done |
 
 ### Acceptance Criteria Examples
 
@@ -490,10 +490,10 @@ Scrum is suitable because the Project can be divided into three short developmen
 | Stage | Status | Tag / Milestone | Goal | Main Deliverables |
 |---|---|---|---|---|
 | Initial Project Setup | ✅ Complete | Initial commit | Establish the new Project repository | Previous Task Tracker starting code, GitHub repository, Project Board, and README |
-| Iteration 1 | ⏳ Planned | `v1.0-iteration1` | Add authentication and user access | Registration, login, logout, roles, assignment, and My Tasks |
-| Iteration 2 | ⏳ Planned | `v1.1-iteration2` | Improve task organisation | Priority, categories, due dates, filtering, and validation |
-| Iteration 3 | ⏳ Planned | `v1.2-iteration3` | Add collaboration and reporting | Kanban board, dashboard, workload monitoring, activity log, and final integration |
-| Final Submission | ⏳ Planned | `v1.2-project-final` | Prepare final Project delivery | Working prototype, Agile documentation, reflective report, screenshots, and presentation |
+| Iteration 1 | ✅ Complete | `v1.0-iteration1` | Add authentication and user access | Registration, login, logout, roles, assignment, and My Tasks (PR #18, #19) |
+| Iteration 2 | ✅ Complete | `v1.1-iteration2` | Improve task organisation | Priority, categories, due dates, filtering, and validation (PR #20) |
+| Iteration 3 | ✅ Complete | `v1.2-iteration3` | Add collaboration and reporting | Kanban board, dashboard, workload monitoring, activity log, responsive redesign, and closing cycle (PR #21, #23, #25) |
+| Final Submission | ⏳ In progress | `v1.2-project-final` | Prepare final Project delivery | Working prototype ready; Agile documentation, reflective report, screenshots, and presentation remaining |
 
 ### Iteration 1 Summary
 
@@ -521,6 +521,96 @@ Scrum is suitable because the Project can be divided into three short developmen
 
 ---
 
+## 🗒️ Agile Process Records (Scrum Evidence)
+
+These records document how the three sprints were actually carried out. Each sprint maps to one iteration, a feature branch, a merged pull request, and a release tag. Dates and pull request numbers reflect the real GitHub history.
+
+### Sprint 1 — Iteration 1 (Authentication and User Access)
+
+**Dates:** 3–5 July 2026 · **Branches:** `feature/authentication`, `feature/iteration1-complete` · **Release:** `v1.0-iteration1`
+
+**Sprint backlog**
+
+| Work item | Issue | Owner |
+|---|---|---|
+| US01 Registration, US02 Login/Logout | #2, #4 | TAN LE PIN |
+| US03 Roles and permissions | #3 | TAN LE PIN |
+| US04 View assigned tasks, US05 Assign to staff | #5 | TAN LE PIN |
+| Acceptance criteria and test scenarios | — | DHINESH |
+
+**Stand-up summaries**
+
+- Set up feature branches and Supabase authentication; registration and login working.
+- Added role-based gating so Staff see only their own tasks; started the assignment dropdown.
+- Fixed session persistence after refresh; prepared the pull request and passed manual testing.
+
+**Sprint review** — Delivered registration, login/logout, Manager and Staff roles, task assignment, and the My Tasks view. Increment merged via PR #18 then PR #19 on 5 July, and tagged `v1.0-iteration1`.
+
+**Sprint retrospective**
+
+- Went well: the feature-branch workflow and Supabase auth came together quickly.
+- To improve: pull request authorship was concentrated on one member.
+- Action: distribute issue and pull request authorship more evenly in later sprints.
+
+### Sprint 2 — Iteration 2 (Advanced Task Organisation)
+
+**Dates:** 5 July 2026 · **Branch:** `feature/iteration2-task-organisation` · **Release:** `v1.1-iteration2`
+
+**Sprint backlog**
+
+| Work item | Issue | Owner |
+|---|---|---|
+| US06 Priority, US07 Categories | #7 | TAN LE PIN |
+| US08 Due dates and overdue indicator | #8 | TAN LE PIN |
+| US09 Advanced filtering, US10 Validation | #9 | DHINESH / TAN LE PIN |
+| Iteration 2 testing and sprint review prep | #10 | DHINESH |
+
+**Stand-up summaries**
+
+- Added priority and category fields to the task model and form.
+- Added due dates with an overdue indicator and an overdue filter.
+- Combined status, priority, category, staff, and overdue filters; tightened form validation.
+
+**Sprint review** — Delivered priority, categories, due dates with overdue flags, combined filtering, and stronger validation. Merged via PR #20 on 5 July, and tagged `v1.1-iteration2`.
+
+**Sprint retrospective**
+
+- Went well: the increment was small, focused, and easy to test.
+- To improve: peer review comments were still light.
+- Action: add explicit review comments on each pull request before merge.
+
+### Sprint 3 — Iteration 3 (Collaboration and Reporting)
+
+**Dates:** 7–8 July 2026 · **Branch:** `feature/iteration3-collaboration-reporting` · **Release:** `v1.2-iteration3`
+
+**Sprint backlog**
+
+| Work item | Issue | Owner |
+|---|---|---|
+| US11 Kanban board | #12 | TAN LE PIN |
+| US12 Dashboard analytics, US13 Workload monitoring | #13 | TAN LE PIN |
+| US14 Activity log | #14 | TAN LE PIN |
+| US15 Responsive UI and restaurant redesign | #15 | DHINESH |
+| Final integration and release preparation | #16 | TAN LE PIN |
+| Backlog acceptance criteria | #22 | DHINESH |
+| Fix: Close Today archive permission | #24 | DHINESH |
+
+**Stand-up summaries**
+
+- Built the Kanban board, dashboard analytics, workload monitoring, and activity log; added Daily Tasks and the restaurant open/close operating cycle.
+- Redesigned the interface into a modern restaurant theme and improved responsiveness.
+- Found that Close Today saved reviews but could not clear active tasks; traced it to the task-update trigger and fixed it; expanded the backlog with acceptance criteria.
+
+**Sprint review** — Delivered the Kanban board, dashboard analytics, staff workload, activity log, responsive restaurant-themed UI, Daily Tasks, the open/close operating cycle, and end-of-day closing review with history. Iteration 3 merged to `main` via PR #21 (closing issues #12–#16); documentation and the closing fix merged via PR #23 and PR #25. Tagged `v1.2-iteration3`.
+
+**Sprint retrospective**
+
+- Went well: a real defect (the closing trigger) was caught, tracked as an issue, and fixed through its own branch and pull request.
+- To improve: release tags and peer review comments were added late in the sprint.
+- Action: create the three iteration tags and record review comments on every pull request before final submission.
+
+---
+
 ## 🔧 GitHub Usage
 
 GitHub is used to support version control, collaboration, task tracking, peer review, and iteration evidence.
@@ -535,17 +625,13 @@ User Story -> GitHub Issue -> Feature Branch -> Commit -> Pull Request -> Review
 
 | Branch | Purpose |
 |---|---|
-| `main` | Stable and reviewed version of the application |
-| `feature/user-registration` | User registration development |
-| `feature/login-and-roles` | Login, logout, and role identification |
-| `feature/my-tasks` | Assigned task view |
-| `feature/task-priority-labels` | Priority and category development |
-| `feature/task-due-date-filtering` | Due dates and advanced filters |
-| `feature/kanban-board` | Kanban task view |
-| `feature/dashboard-analytics` | Dashboard and workload summary |
-| `feature/activity-log` | Activity history development |
-| `docs/agile-process-documentation` | Agile evidence and process records |
-| `docs/reflective-report` | Reflective report preparation |
+| `main` | Stable, reviewed, and released version of the application |
+| `feature/authentication` | User registration, login, logout, and session management |
+| `feature/iteration1-complete` | Iteration 1 authentication, roles, assignment, and My Tasks |
+| `feature/iteration2-task-organisation` | Priority, categories, due dates, filtering, and validation |
+| `feature/iteration3-collaboration-reporting` | Kanban board, analytics, workload, activity log, and responsive UI |
+| `docs/backlog-acceptance-criteria` | Product backlog acceptance criteria (Iteration 3 documentation) |
+| `fix/manager-closing-archive-permission` | Fix for the Close Today archive-permission trigger |
 
 ### Planned Tags and Releases
 
@@ -598,16 +684,15 @@ The Project repository will include:
 - Manage release tags
 - Coordinate final submission
 
-**Planned Evidence**
+**Evidence (actual)**
 
-- GitHub Issues
-- Feature branches
-- Application commits
-- Pull requests
-- Pull request reviews
-- Release tags
-- Board updates
-- System screenshots
+- Opened the Iteration 1–3 development issues (#1–#17)
+- Feature branches `feature/authentication`, `feature/iteration1-complete`, `feature/iteration2-task-organisation`, `feature/iteration3-collaboration-reporting`
+- Application commits across all three iterations
+- Pull requests #18 and #19 (Iteration 1), #20 (Iteration 2), and #21 (Iteration 3, merged to `main`)
+- Pull request review comments on Iteration 1–3 pull requests
+- Release tags `v1.0-iteration1`, `v1.1-iteration2`, `v1.2-iteration3`
+- GitHub Project Board updates and system screenshots
 
 ### DHINESH
 
@@ -623,16 +708,14 @@ The Project repository will include:
 - Support Agile documentation
 - Review pull requests
 
-**Planned Evidence**
+**Evidence (actual)**
 
-- GitHub Issues
-- Feature branches
-- Development commits
-- Documentation commits
-- Pull requests
-- Pull request reviews
-- Testing records
-- Scrum documentation
+- Opened issues #22 (backlog acceptance criteria), #24 (Close Today archive-permission fix), and the Agile process records issue
+- Feature branches `docs/backlog-acceptance-criteria`, `fix/manager-closing-archive-permission`, and the README Agile-records branch
+- Documentation and fix commits authored as `Dhee0511`
+- Pull requests #23 (backlog acceptance criteria), #25 (closing-permission schema fix), and the README Agile-records pull request
+- Pull request review comments on Noyolos's Iteration 3 pull request
+- Product backlog acceptance criteria, schema bug fix, and Agile process records
 
 ---
 
@@ -683,33 +766,30 @@ The Reflective Report will include:
 
 ## ✅ Project Status
 
-**Status:** Project setup and planning in progress
+**Status:** All three iterations complete; preparing final submission
 
 ### Completed
 
-- New GitHub repository created
-- Previous Restaurant Operations Task Tracker added as the starting system
-- Initial source code added
-- GitHub Project Board created
-- Scrum methodology selected
-- Initial README prepared
+- All three Scrum iterations implemented and merged to `main`
+- Iteration 1: authentication, roles, assignment, and My Tasks (PR #18, #19)
+- Iteration 2: priority, categories, due dates, filtering, and validation (PR #20)
+- Iteration 3: Kanban board, dashboard analytics, workload monitoring, activity log, responsive restaurant redesign, Daily Tasks, and the open/close operating cycle (PR #21, #23, #25)
+- Product backlog with 15 user stories and acceptance criteria
+- Feature-branch workflow, issues, pull requests, and Agile sprint records
 
-### Current Work
+### Remaining for Final Submission
 
-- Prepare the Product Backlog
-- Create at least 12 User Stories
-- Add acceptance criteria
-- Create Iteration 1 Issues
-- Assign team responsibilities
-- Invite project collaborator
-- Begin authentication development
+- Create the release tags `v1.0-iteration1`, `v1.1-iteration2`, and `v1.2-iteration3`
+- Add peer review comments on the Iteration 3 pull requests
+- Capture GitHub and system screenshots for the Agile documentation
+- Complete the Reflective Report (approximately 2,000–2,500 words)
 
-### Next Milestone
+### Final Milestone
 
 ```text
-v1.0-iteration1
+v1.2-project-final
 ```
 
-The next milestone will deliver user registration, login, logout, role identification, registered staff assignment, and the My Tasks view.
+The final milestone packages the working prototype, Agile process records, reflective report, screenshots, and presentation for submission.
 
-**Last Updated:** July 2026
+**Last Updated:** 8 July 2026
