@@ -157,26 +157,44 @@ begin
     return new;
   end if;
 
+  -- Allow trusted database maintenance from Supabase SQL Editor or service role.
+  -- Normal application users are still checked through public.profiles below.
+  if auth.uid() is null and current_user in ('postgres', 'supabase_admin', 'service_role') then
+    return new;
+  end if;
+
   select role into v_role
   from public.profiles
   where id = auth.uid();
 
-  if v_role is distinct from 'Manager' and (
-    new.title is distinct from old.title or
-    new.description is distinct from old.description or
-    new.assigned_to is distinct from old.assigned_to or
-    new.priority is distinct from old.priority or
-    new.category is distinct from old.category or
-    new.due_date is distinct from old.due_date or
-    new.business_date is distinct from old.business_date or
-    new.archived_at is distinct from old.archived_at or
-    new.created_by is distinct from old.created_by or
-    new.created_at is distinct from old.created_at
-  ) then
-    raise exception 'Staff may only update task status';
+  -- Managers can update task fields, including archived_at during Close Today.
+  if v_role = 'Manager' then
+    return new;
   end if;
 
-  return new;
+  -- Staff users may only update task status.
+  if v_role = 'Staff' then
+    if
+      new.title is distinct from old.title or
+      new.description is distinct from old.description or
+      new.assigned_to is distinct from old.assigned_to or
+      new.priority is distinct from old.priority or
+      new.category is distinct from old.category or
+      new.due_date is distinct from old.due_date or
+      new.business_date is distinct from old.business_date or
+      new.operation_cycle is distinct from old.operation_cycle or
+      new.source_template_id is distinct from old.source_template_id or
+      new.archived_at is distinct from old.archived_at or
+      new.created_by is distinct from old.created_by or
+      new.created_at is distinct from old.created_at
+    then
+      raise exception 'Staff may only update task status';
+    end if;
+
+    return new;
+  end if;
+
+  raise exception 'Only managers or assigned staff may update tasks';
 end;
 $$;
 
