@@ -2,6 +2,7 @@ const SUPABASE_URL = "https://tcsvafdvnyttxptlgapk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjc3ZhZmR2bnl0dHhwdGxnYXBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODc1OTksImV4cCI6MjA5ODY2MzU5OX0.23zk-m--_LLBuQdAKXD9UGy-hD92SnJNWP7TCn41nz4";
 const LEGACY_TASKS_STORAGE_KEY = "tasks";
 const LEGACY_MIGRATION_KEY = "supabaseTasksMigrated";
+const TASK_TEMPLATES_STORAGE_KEY = "restaurantTaskTemplates";
 const VALID_STATUSES = ["To Do", "In Progress", "Done"];
 const VALID_PRIORITIES = ["Low", "Medium", "High"];
 const VALID_CATEGORIES = ["Kitchen Preparation", "Cleaning", "Inventory", "Service Setup", "Maintenance", "Other"];
@@ -23,11 +24,16 @@ const registerPassword = document.getElementById("registerPassword");
 const registerRole = document.getElementById("registerRole");
 const activeUserName = document.getElementById("activeUserName");
 const activeUserRole = document.getElementById("activeUserRole");
+const accountSwitcher = document.getElementById("accountSwitcher");
 const logoutBtn = document.getElementById("logoutBtn");
+const openOperationsBtn = document.getElementById("openOperationsBtn");
+const operationStatus = document.getElementById("operationStatus");
+const operationStatusDetail = document.getElementById("operationStatusDetail");
 const boardSubtitle = document.getElementById("boardSubtitle");
 const taskFormCard = document.getElementById("taskFormCard");
 const taskForm = document.getElementById("taskForm");
 const taskTitle = document.getElementById("taskTitle");
+const quickTaskSelect = document.getElementById("quickTaskSelect");
 const taskDescription = document.getElementById("taskDescription");
 const assignedUser = document.getElementById("assignedUser");
 const taskStatus = document.getElementById("taskStatus");
@@ -41,6 +47,52 @@ const categoryFilter = document.getElementById("categoryFilter");
 const staffFilter = document.getElementById("staffFilter");
 const overdueFilter = document.getElementById("overdueFilter");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+const sideNav = document.getElementById("sideNav");
+const newTaskBtn = document.getElementById("newTaskBtn");
+const closeTaskDrawerBtn = document.getElementById("closeTaskDrawerBtn");
+const taskDrawerBackdrop = document.getElementById("taskDrawerBackdrop");
+const manageTaskTemplatesBtn = document.getElementById("manageTaskTemplatesBtn");
+const taskTemplateModal = document.getElementById("taskTemplateModal");
+const closeTaskTemplateModalBtn = document.getElementById("closeTaskTemplateModalBtn");
+const taskTemplateForm = document.getElementById("taskTemplateForm");
+const taskTemplateInput = document.getElementById("taskTemplateInput");
+const saveTaskTemplateBtn = document.getElementById("saveTaskTemplateBtn");
+const taskTemplateMessage = document.getElementById("taskTemplateMessage");
+const taskTemplateList = document.getElementById("taskTemplateList");
+const closeDayBtn = document.getElementById("closeDayBtn");
+const closeDayModal = document.getElementById("closeDayModal");
+const closeCloseDayModalBtn = document.getElementById("closeCloseDayModalBtn");
+const cancelCloseDayBtn = document.getElementById("cancelCloseDayBtn");
+const confirmCloseDayBtn = document.getElementById("confirmCloseDayBtn");
+const closeDayMessage = document.getElementById("closeDayMessage");
+const closingHistoryCard = document.getElementById("closingHistoryCard");
+const closingHistoryList = document.getElementById("closingHistoryList");
+const closingReviewList = document.getElementById("closingReviewList");
+const dailyTasksCard = document.getElementById("dailyTasksCard");
+const dailyTaskOptions = document.getElementById("dailyTaskOptions");
+const dailyTaskMessage = document.getElementById("dailyTaskMessage");
+const generateDailyTasksBtn = document.getElementById("generateDailyTasksBtn");
+const manageDailyTasksBtn = document.getElementById("manageDailyTasksBtn");
+const dailyTaskModal = document.getElementById("dailyTaskModal");
+const closeDailyTaskModalBtn = document.getElementById("closeDailyTaskModalBtn");
+const dailyTaskForm = document.getElementById("dailyTaskForm");
+const dailyTaskId = document.getElementById("dailyTaskId");
+const dailyTaskTitle = document.getElementById("dailyTaskTitle");
+const dailyTaskDescription = document.getElementById("dailyTaskDescription");
+const dailyTaskStaff = document.getElementById("dailyTaskStaff");
+const dailyTaskPriority = document.getElementById("dailyTaskPriority");
+const dailyTaskCategory = document.getElementById("dailyTaskCategory");
+const dailyTaskDueOffset = document.getElementById("dailyTaskDueOffset");
+const cancelDailyTaskEditBtn = document.getElementById("cancelDailyTaskEditBtn");
+const dailyTaskFormMessage = document.getElementById("dailyTaskFormMessage");
+const dailyTaskTemplateList = document.getElementById("dailyTaskTemplateList");
+const listViewBtn = document.getElementById("listViewBtn");
+const kanbanViewBtn = document.getElementById("kanbanViewBtn");
+const listView = document.getElementById("listView");
+const kanbanView = document.getElementById("kanbanView");
+const workloadCard = document.getElementById("workloadCard");
+const workloadList = document.getElementById("workloadList");
+const activityList = document.getElementById("activityList");
 const taskMessage = document.getElementById("taskMessage");
 const formTitle = document.getElementById("formTitle");
 const submitBtn = document.getElementById("submitBtn");
@@ -50,6 +102,22 @@ let profiles = [];
 let tasks = [];
 let activeUser = null;
 let editingTaskId = null;
+let activities = [];
+let currentView = "list";
+let editingTemplateIndex = null;
+let closings = [];
+let closingReviews = [];
+let dailyTemplates = [];
+let operationsState = null;
+
+const DEFAULT_TASKS = [
+  "Prepare dinner service station",
+  "Check ingredient and beverage inventory",
+  "Clean and sanitise dining area",
+  "Inspect kitchen equipment",
+  "Set up tables and menus",
+  "Review supplier delivery"
+];
 
 function normalizeUsername(username) {
   return username.trim().toLowerCase();
@@ -65,6 +133,10 @@ function isValidUsername(username) {
 
 function isManager() {
   return activeUser && activeUser.role === "Manager";
+}
+
+function isOperationsOpen() {
+  return Boolean(operationsState?.is_open);
 }
 
 function setMessage(element, type, text) {
@@ -135,6 +207,582 @@ function isTaskOverdue(task) {
   const today = new Date();
   const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   return task.due_date < localToday;
+}
+
+function formatEnglishDate(value) {
+  if (!value) return "No due date";
+  return new Date(`${value}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+function getLocalDateValue(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getTaskTemplates() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(TASK_TEMPLATES_STORAGE_KEY) || "null");
+    return Array.isArray(stored) ? stored.filter((title) => typeof title === "string" && title.trim()) : [...DEFAULT_TASKS];
+  } catch (error) {
+    return [...DEFAULT_TASKS];
+  }
+}
+
+function saveTaskTemplates(templates) {
+  localStorage.setItem(TASK_TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+}
+
+function renderQuickTaskOptions() {
+  const selectedTask = taskTitle.value;
+  quickTaskSelect.innerHTML = '<option value="">Select a task</option>';
+  getTaskTemplates().forEach((title) => {
+    const option = document.createElement("option");
+    option.value = title;
+    option.textContent = title;
+    quickTaskSelect.appendChild(option);
+  });
+  quickTaskSelect.value = getTaskTemplates().includes(selectedTask) ? selectedTask : "";
+}
+
+function ensureTaskTemplate(title) {
+  const templates = getTaskTemplates();
+  if (!templates.some((item) => item.toLowerCase() === title.toLowerCase())) {
+    templates.push(title);
+    saveTaskTemplates(templates);
+  }
+}
+
+function renderTaskTemplateList() {
+  taskTemplateList.innerHTML = "";
+  const templates = getTaskTemplates();
+  templates.forEach((title, index) => {
+    const row = document.createElement("div");
+    row.className = "template-row";
+    const name = document.createElement("span");
+    name.textContent = title;
+    const actions = document.createElement("div");
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "secondary-btn small-btn";
+    editButton.textContent = "Edit";
+    editButton.addEventListener("click", () => {
+      editingTemplateIndex = index;
+      taskTemplateInput.value = title;
+      saveTaskTemplateBtn.textContent = "Save";
+      taskTemplateInput.focus();
+    });
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "danger-btn small-btn";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", () => {
+      const deletedTitle = templates[index];
+      templates.splice(index, 1);
+      saveTaskTemplates(templates);
+      if (taskTitle.value === deletedTitle && !editingTaskId) taskTitle.value = "";
+      renderTaskTemplateList();
+      renderQuickTaskOptions();
+    });
+    actions.append(editButton, deleteButton);
+    row.append(name, actions);
+    taskTemplateList.appendChild(row);
+  });
+
+  if (!templates.length) taskTemplateList.textContent = "No task options. Add one above.";
+}
+
+function renderAccountSwitcher() {
+  accountSwitcher.innerHTML = "";
+  profiles.forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = `${profile.full_name} (${profile.role})`;
+    accountSwitcher.appendChild(option);
+  });
+  accountSwitcher.value = activeUser?.id || "";
+}
+
+function populateDailyTaskStaff() {
+  const selected = dailyTaskStaff.value;
+  dailyTaskStaff.innerHTML = '<option value="">Unassigned</option>';
+  getStaffProfiles().forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.full_name;
+    dailyTaskStaff.appendChild(option);
+  });
+  dailyTaskStaff.value = getProfileById(selected)?.role === "Staff" ? selected : "";
+}
+
+function resetDailyTaskForm() {
+  dailyTaskForm.reset();
+  dailyTaskId.value = "";
+  dailyTaskPriority.value = "Medium";
+  dailyTaskCategory.value = "Other";
+  dailyTaskDueOffset.value = "0";
+  populateDailyTaskStaff();
+  setMessage(dailyTaskFormMessage, "", "");
+}
+
+function renderDailyTaskOptions() {
+  dailyTaskOptions.innerHTML = "";
+  dailyTemplates.filter((template) => template.active).forEach((template) => {
+    const staffName = getProfileById(template.assigned_to)?.full_name || "Unassigned";
+    const label = document.createElement("label");
+    label.className = "daily-task-option";
+    label.innerHTML = `<input type="checkbox"><div><strong></strong><span></span></div>`;
+    label.querySelector("input").value = template.id;
+    label.querySelector("strong").textContent = template.title;
+    label.querySelector("span").textContent = `${staffName} | ${template.priority} | ${template.category}`;
+    dailyTaskOptions.appendChild(label);
+  });
+  if (!dailyTaskOptions.children.length) dailyTaskOptions.textContent = "No Daily Tasks yet. Add reusable assignments first.";
+}
+
+function renderDailyTaskManager() {
+  dailyTaskTemplateList.innerHTML = "";
+  dailyTemplates.forEach((template) => {
+    const row = document.createElement("div");
+    row.className = "template-row";
+    row.innerHTML = `<div><strong></strong><span></span></div><div></div>`;
+    row.querySelector("strong").textContent = template.title;
+    row.querySelector("span").textContent = `${getProfileById(template.assigned_to)?.full_name || "Unassigned"} | ${template.category}`;
+    const actions = row.lastElementChild;
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "secondary-btn small-btn";
+    editButton.textContent = "Edit";
+    editButton.addEventListener("click", () => {
+      dailyTaskId.value = template.id;
+      dailyTaskTitle.value = template.title;
+      dailyTaskDescription.value = template.description;
+      dailyTaskStaff.value = template.assigned_to || "";
+      dailyTaskPriority.value = template.priority;
+      dailyTaskCategory.value = template.category;
+      dailyTaskDueOffset.value = String(template.due_offset_days);
+      dailyTaskTitle.focus();
+    });
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "danger-btn small-btn";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", async () => {
+      const { error } = await supabaseClient.from("daily_task_templates").delete().eq("id", template.id);
+      if (error) return setMessage(dailyTaskFormMessage, "error", "Unable to delete this Daily Task.");
+      await loadDailyTemplates();
+      renderDailyTaskManager();
+      renderDailyTaskOptions();
+    });
+    actions.append(editButton, deleteButton);
+    dailyTaskTemplateList.appendChild(row);
+  });
+  if (!dailyTemplates.length) dailyTaskTemplateList.textContent = "No Daily Task templates have been created.";
+}
+
+function dateWithOffset(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + Number(days));
+  return getLocalDateValue(date);
+}
+
+function getCategoryIcon(category) {
+  const icons = {
+    "Kitchen Preparation": "K",
+    Cleaning: "C",
+    Inventory: "I",
+    "Service Setup": "S",
+    Maintenance: "M",
+    Other: "O"
+  };
+  return icons[category] || "O";
+}
+
+async function recordActivity(action, taskTitle = null) {
+  if (!activeUser) {
+    return;
+  }
+
+  const { error } = await supabaseClient.from("activity_log").insert({
+    user_id: activeUser.id,
+    user_name: activeUser.full_name,
+    action,
+    task_title: taskTitle
+  });
+
+  if (!error) {
+    await loadActivities();
+    renderActivities();
+  }
+}
+
+function updateAnalytics() {
+  const values = {
+    totalAnalytics: tasks.length,
+    todoAnalytics: tasks.filter((task) => task.status === "To Do").length,
+    progressAnalytics: tasks.filter((task) => task.status === "In Progress").length,
+    doneAnalytics: tasks.filter((task) => task.status === "Done").length,
+    overdueAnalytics: tasks.filter(isTaskOverdue).length,
+    highAnalytics: tasks.filter((task) => task.priority === "High").length
+  };
+
+  Object.entries(values).forEach(([id, value]) => {
+    document.getElementById(id).textContent = value;
+  });
+}
+
+function createKanbanTask(task) {
+  const item = document.createElement("article");
+  item.className = `kanban-task${isTaskOverdue(task) ? " task-overdue" : ""}`;
+  const assignedStaff = getProfileById(task.assigned_to);
+  item.innerHTML = `<div class="board-task-heading"><span class="category-icon"></span><strong></strong></div><p></p><div class="kanban-tags"></div>`;
+  item.querySelector(".category-icon").textContent = getCategoryIcon(task.category);
+  item.querySelector("strong").textContent = task.title;
+  item.querySelector("p").textContent = assignedStaff?.full_name || "Unassigned";
+  const tags = item.querySelector(".kanban-tags");
+  [task.priority, task.category].forEach((value) => {
+    const tag = document.createElement("span");
+    tag.textContent = value;
+    tags.appendChild(tag);
+  });
+
+  if (canChangeTaskStatus(task)) {
+    const actions = document.createElement("div");
+    actions.className = "kanban-actions";
+    VALID_STATUSES.filter((status) => status !== task.status).forEach((status) => {
+      const button = document.createElement("button");
+      button.className = "secondary-btn small-btn";
+      button.textContent = status;
+      button.addEventListener("click", () => changeStatus(task.id, status));
+      actions.appendChild(button);
+    });
+    item.appendChild(actions);
+  }
+
+  return item;
+}
+
+function renderKanban() {
+  const columns = {
+    "To Do": document.getElementById("kanbanTodo"),
+    "In Progress": document.getElementById("kanbanProgress"),
+    Done: document.getElementById("kanbanDone")
+  };
+
+  Object.values(columns).forEach((column) => { column.innerHTML = ""; });
+  tasks.forEach((task) => columns[task.status].appendChild(createKanbanTask(task)));
+  document.getElementById("kanbanTodoCount").textContent = tasks.filter((task) => task.status === "To Do").length;
+  document.getElementById("kanbanProgressCount").textContent = tasks.filter((task) => task.status === "In Progress").length;
+  document.getElementById("kanbanDoneCount").textContent = tasks.filter((task) => task.status === "Done").length;
+
+  Object.entries(columns).forEach(([status, column]) => {
+    if (!column.children.length) {
+      const empty = document.createElement("p");
+      empty.className = "kanban-empty";
+      empty.textContent = `No ${status.toLowerCase()} tasks.`;
+      column.appendChild(empty);
+    }
+  });
+}
+
+function renderWorkload() {
+  workloadList.innerHTML = "";
+  getStaffProfiles().forEach((profile) => {
+    const assignedTasks = tasks.filter((task) => task.assigned_to === profile.id);
+    const activeTasks = assignedTasks.filter((task) => task.status !== "Done");
+    const completedTasks = assignedTasks.filter((task) => task.status === "Done");
+    const overdueTasks = activeTasks.filter(isTaskOverdue);
+    const highTasks = activeTasks.filter((task) => task.priority === "High");
+    const loadScore = Math.min(100, activeTasks.length * 20 + overdueTasks.length * 25 + highTasks.length * 10);
+    const loadLevel = loadScore > 70 ? "high" : loadScore > 40 ? "medium" : "low";
+    const loadLabel = loadLevel === "high" ? "At capacity" : loadLevel === "medium" ? "Balanced" : "Available";
+    const row = document.createElement("div");
+    row.className = "workload-row";
+    row.innerHTML = `<div class="workload-heading"><span class="staff-avatar"></span><div><strong></strong><small></small></div><b></b></div><div class="capacity-track"><span></span></div><div class="workload-metrics"><span></span><span></span><span></span></div>`;
+    row.querySelector(".staff-avatar").textContent = profile.full_name.charAt(0).toUpperCase();
+    row.querySelector("strong").textContent = profile.full_name;
+    row.querySelector("small").textContent = `${assignedTasks.length} total tasks`;
+    row.querySelector("b").textContent = loadLabel;
+    row.querySelector("b").className = `capacity-label capacity-${loadLevel}`;
+    const capacityBar = row.querySelector(".capacity-track span");
+    capacityBar.className = `capacity-${loadLevel}`;
+    capacityBar.style.width = `${Math.max(loadScore, assignedTasks.length ? 12 : 4)}%`;
+    const metricItems = row.querySelectorAll(".workload-metrics span");
+    metricItems[0].textContent = `${activeTasks.length} active`;
+    metricItems[1].textContent = `${completedTasks.length} completed`;
+    metricItems[2].textContent = `${overdueTasks.length} overdue`;
+    workloadList.appendChild(row);
+  });
+
+  if (!workloadList.children.length) {
+    workloadList.textContent = "No Staff accounts are registered.";
+  }
+}
+
+function renderActivities() {
+  activityList.innerHTML = "";
+  activities.forEach((activity) => {
+    const item = document.createElement("div");
+    item.className = "activity-item";
+    const summary = activity.task_title ? `${activity.action}: ${activity.task_title}` : activity.action;
+    item.innerHTML = `<strong></strong><p></p><time></time>`;
+    item.querySelector("strong").textContent = activity.user_name;
+    item.querySelector("p").textContent = summary;
+    item.querySelector("time").textContent = new Date(activity.created_at).toLocaleString();
+    activityList.appendChild(item);
+  });
+
+  if (!activities.length) {
+    activityList.textContent = "No activity has been recorded yet.";
+  }
+}
+
+function getClosingSummary() {
+  return {
+    total: tasks.length,
+    completed: tasks.filter((task) => task.status === "Done").length,
+    carried: tasks.filter((task) => task.status !== "Done").length,
+    overdue: tasks.filter(isTaskOverdue).length
+  };
+}
+
+function renderClosingHistory() {
+  closingHistoryList.innerHTML = "";
+  closings.forEach((closing) => {
+    const item = document.createElement("div");
+    item.className = "closing-history-row";
+    item.innerHTML = `<div><strong></strong><span></span></div><div class="closing-history-metrics"><span></span><span></span><span></span><span></span></div><div class="closing-history-details hidden"></div>`;
+    item.querySelector("strong").textContent = formatEnglishDate(closing.business_date);
+    const openedTime = closing.opened_at ? new Date(closing.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "Not recorded";
+    const closedTime = new Date(closing.closed_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    item.querySelector("div > span").textContent = `Opened ${openedTime} | Closed ${closedTime} by ${closing.manager_name}`;
+    const metrics = item.querySelectorAll(".closing-history-metrics span");
+    metrics[0].textContent = `${closing.total_tasks} total`;
+    metrics[1].textContent = `${closing.completed_tasks} completed`;
+    metrics[2].textContent = `${closing.issue_tasks || 0} issues`;
+    metrics[3].textContent = `${closing.no_issue_tasks || 0} no issue`;
+    const details = item.querySelector(".closing-history-details");
+    closingReviews.filter((review) => review.closing_id === closing.id).forEach((review) => {
+      const row = document.createElement("div");
+      row.className = "closing-history-task";
+      const outcomeClass = review.outcome.toLowerCase().replaceAll(" ", "-");
+      row.innerHTML = `<span class="outcome-badge ${outcomeClass}"></span><div><strong></strong><p></p></div><span></span>`;
+      row.querySelector(".outcome-badge").textContent = review.outcome;
+      row.querySelector("strong").textContent = review.task_title;
+      row.querySelector("p").textContent = review.note || "No follow-up note.";
+      row.querySelector("div + span").textContent = review.assigned_name;
+      details.appendChild(row);
+    });
+    item.addEventListener("click", () => details.classList.toggle("hidden"));
+    closingHistoryList.appendChild(item);
+  });
+  if (!closings.length) closingHistoryList.textContent = "No business days have been closed yet.";
+}
+
+function renderClosingReviewList() {
+  closingReviewList.innerHTML = "";
+  tasks.forEach((task) => {
+    const item = document.createElement("div");
+    const staffName = getProfileById(task.assigned_to)?.full_name || "Unassigned";
+    item.className = `closing-review-item${task.status === "Done" ? " completed" : ""}`;
+    item.dataset.taskId = task.id;
+    item.innerHTML = `<div class="closing-review-meta"><strong></strong><span></span></div>`;
+    item.querySelector("strong").textContent = task.title;
+    item.querySelector("span").textContent = `${staffName} | ${task.status}`;
+    if (task.status === "Done") {
+      const badge = document.createElement("span");
+      badge.className = "outcome-badge";
+      badge.textContent = "Completed";
+      item.appendChild(badge);
+    } else {
+      const outcome = document.createElement("select");
+      outcome.className = "closing-outcome";
+      outcome.innerHTML = '<option value="">Choose result</option><option value="Issue">Issue</option><option value="No Issue">No Issue</option>';
+      const note = document.createElement("input");
+      note.className = "closing-note";
+      note.placeholder = "Reason (required for Issue)";
+      outcome.addEventListener("change", () => {
+        note.required = outcome.value === "Issue";
+        note.placeholder = outcome.value === "Issue" ? "Describe the issue (required)" : "Optional note";
+      });
+      item.append(outcome, note);
+    }
+    closingReviewList.appendChild(item);
+  });
+}
+
+function openCloseDayModal() {
+  const summary = getClosingSummary();
+  document.getElementById("closingTotal").textContent = summary.total;
+  document.getElementById("closingCompleted").textContent = summary.completed;
+  document.getElementById("closingCarried").textContent = summary.carried;
+  document.getElementById("closingOverdue").textContent = summary.overdue;
+  renderClosingReviewList();
+  setMessage(closeDayMessage, "", "");
+  confirmCloseDayBtn.disabled = !isOperationsOpen() || tasks.length === 0;
+  if (!tasks.length) setMessage(closeDayMessage, "info", "There are no active tasks to close.");
+  closeDayModal.classList.remove("hidden");
+}
+
+function collectClosingReviews() {
+  const rows = [];
+  for (const task of tasks) {
+    const item = closingReviewList.querySelector(`[data-task-id="${task.id}"]`);
+    const assignedName = getProfileById(task.assigned_to)?.full_name || "Unassigned";
+    let outcome = "Completed";
+    let note = "";
+    if (task.status !== "Done") {
+      outcome = item.querySelector(".closing-outcome").value;
+      note = item.querySelector(".closing-note").value.trim();
+      if (!outcome) throw new Error(`Classify "${task.title}" as Issue or No Issue.`);
+      if (outcome === "Issue" && !note) throw new Error(`Add an issue reason for "${task.title}".`);
+    }
+    rows.push({ task, assignedName, outcome, note });
+  }
+  return rows;
+}
+
+async function openOperations() {
+  if (!isManager() || isOperationsOpen()) return;
+  openOperationsBtn.disabled = true;
+  openOperationsBtn.textContent = "Opening...";
+  const openedAt = new Date().toISOString();
+  const { error } = await supabaseClient
+    .from("restaurant_operations")
+    .update({
+      is_open: true,
+      operation_cycle: operationsState.operation_cycle + 1,
+      business_date: getLocalDateValue(),
+      opened_at: openedAt,
+      opened_by: activeUser.id,
+      updated_at: openedAt
+    })
+    .eq("id", 1);
+  if (error) {
+    setMessage(authMessage, "error", "Unable to open restaurant operations.");
+    openOperationsBtn.disabled = false;
+    openOperationsBtn.innerHTML = "<span>▶</span> Open Operations";
+    return;
+  }
+  await loadOperations();
+  await loadTasks();
+  await recordActivity("Opened restaurant operations");
+  renderApp();
+  openOperationsBtn.disabled = false;
+  openOperationsBtn.innerHTML = "<span>▶</span> Open Operations";
+}
+
+async function completeBusinessDay() {
+  if (!isManager() || confirmCloseDayBtn.disabled) return;
+  let reviews;
+  try {
+    reviews = collectClosingReviews();
+  } catch (error) {
+    setMessage(closeDayMessage, "error", error.message);
+    return;
+  }
+
+  confirmCloseDayBtn.disabled = true;
+  confirmCloseDayBtn.textContent = "Closing...";
+  const summary = getClosingSummary();
+  const issueCount = reviews.filter((review) => review.outcome === "Issue").length;
+  const noIssueCount = reviews.filter((review) => review.outcome === "No Issue").length;
+  const { data: closing, error: closingError } = await supabaseClient.from("daily_closings").insert({
+    business_date: operationsState.business_date,
+    operation_cycle: operationsState.operation_cycle,
+    opened_at: operationsState.opened_at,
+    manager_id: activeUser.id,
+    manager_name: activeUser.full_name,
+    total_tasks: summary.total,
+    completed_tasks: summary.completed,
+    carried_tasks: 0,
+    overdue_tasks: summary.overdue,
+    issue_tasks: issueCount,
+    no_issue_tasks: noIssueCount
+  }).select("id").single();
+
+  if (closingError) {
+    setMessage(closeDayMessage, "error", "Unable to save the closing summary. No tasks were cleared.");
+    confirmCloseDayBtn.disabled = false;
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  const reviewRows = reviews.map(({ task, assignedName, outcome, note }) => ({
+    closing_id: closing.id,
+    business_date: operationsState.business_date,
+    operation_cycle: operationsState.operation_cycle,
+    task_id: task.id,
+    task_title: task.title,
+    assigned_to: task.assigned_to,
+    assigned_name: assignedName,
+    original_status: task.status,
+    outcome,
+    note,
+    manager_id: activeUser.id,
+    manager_name: activeUser.full_name
+  }));
+  const { error: reviewError } = await supabaseClient.from("closing_task_reviews").insert(reviewRows);
+  if (reviewError) {
+    setMessage(closeDayMessage, "error", "Closing summary saved, but task reviews could not be recorded.");
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  const { error: archiveError } = await supabaseClient
+    .from("tasks")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("operation_cycle", operationsState.operation_cycle)
+    .is("archived_at", null);
+  if (archiveError) {
+    setMessage(closeDayMessage, "error", "Reviews were saved, but active tasks could not be cleared.");
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  const { error: stateError } = await supabaseClient
+    .from("restaurant_operations")
+    .update({ is_open: false, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (stateError) {
+    setMessage(closeDayMessage, "error", "Tasks were closed, but the operations status could not be updated.");
+    confirmCloseDayBtn.textContent = "Confirm Closing";
+    return;
+  }
+
+  await recordActivity("Closed today's operations");
+  await loadOperations();
+  await loadTasks();
+  await loadClosings();
+  closeDayModal.classList.add("hidden");
+  confirmCloseDayBtn.textContent = "Confirm Closing";
+  renderApp();
+}
+
+function setTaskView(view) {
+  currentView = view;
+  const showList = view === "list";
+  listView.classList.toggle("hidden", !showList);
+  kanbanView.classList.toggle("hidden", showList);
+  listViewBtn.classList.toggle("active", showList);
+  kanbanViewBtn.classList.toggle("active", !showList);
+}
+
+function openTaskDrawer() {
+  if (!isManager() || !isOperationsOpen()) return;
+  taskFormCard.classList.remove("hidden");
+  taskDrawerBackdrop.classList.remove("hidden");
+  document.body.classList.add("drawer-open");
+  quickTaskSelect.focus();
+}
+
+function closeTaskDrawer() {
+  taskFormCard.classList.add("hidden");
+  taskDrawerBackdrop.classList.add("hidden");
+  document.body.classList.remove("drawer-open");
+  taskFormCard.classList.remove("edit-mode");
 }
 
 function getErrorMessage(error, fallback) {
@@ -210,7 +858,7 @@ function updateStats() {
 }
 
 function canChangeTaskStatus(task) {
-  return isManager() || task.assigned_to === activeUser?.id;
+  return isOperationsOpen() && (isManager() || task.assigned_to === activeUser?.id);
 }
 
 function renderTasks() {
@@ -236,6 +884,9 @@ function renderTasks() {
       : "No tasks are currently assigned to your account for this filter.";
     taskList.appendChild(emptyState);
     updateStats();
+    updateAnalytics();
+    renderKanban();
+    if (isManager()) renderWorkload();
     return;
   }
 
@@ -252,7 +903,7 @@ function renderTasks() {
     meta.className = "task-meta";
     const assignedStaff = getProfileById(task.assigned_to);
     const createdDate = new Date(task.created_at).toLocaleDateString();
-    const dueDate = task.due_date ? new Date(`${task.due_date}T00:00:00`).toLocaleDateString() : "No due date";
+    const dueDate = formatEnglishDate(task.due_date);
     meta.textContent = `Assigned staff: ${assignedStaff?.full_name || "Unassigned"} | Created: ${createdDate} | Due: ${dueDate}`;
     taskInfo.appendChild(title);
     taskInfo.appendChild(meta);
@@ -321,6 +972,9 @@ function renderTasks() {
   });
 
   updateStats();
+  updateAnalytics();
+  renderKanban();
+  if (isManager()) renderWorkload();
 }
 
 function resetTaskForm() {
@@ -330,7 +984,10 @@ function resetTaskForm() {
   taskStatus.value = "To Do";
   taskPriority.value = "Medium";
   taskCategory.value = "Other";
-  formTitle.textContent = "Create Restaurant Task";
+  renderQuickTaskOptions();
+  quickTaskSelect.value = "";
+  taskFormCard.classList.remove("edit-mode");
+  formTitle.textContent = "Create Task";
   submitBtn.textContent = "Add Task";
   cancelEditBtn.classList.add("hidden");
   setMessage(taskMessage, "", "");
@@ -340,6 +997,8 @@ function renderApp() {
   const loggedIn = Boolean(activeUser);
   authSection.classList.toggle("hidden", loggedIn);
   appSection.classList.toggle("hidden", !loggedIn);
+  document.body.classList.toggle("app-active", loggedIn);
+  sideNav.classList.toggle("hidden", !loggedIn);
 
   if (!loggedIn) {
     return;
@@ -347,14 +1006,34 @@ function renderApp() {
 
   activeUserName.textContent = activeUser.full_name;
   activeUserRole.textContent = `Role: ${activeUser.role}`;
-  boardSubtitle.textContent = isManager()
-    ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
-    : "Staff can only view tasks assigned to their own account and update their task status.";
-  taskFormCard.classList.toggle("hidden", !isManager());
+  renderAccountSwitcher();
+  operationStatus.textContent = isOperationsOpen() ? "Open" : "Closed";
+  operationStatus.classList.toggle("is-open", isOperationsOpen());
+  operationStatusDetail.textContent = isOperationsOpen()
+    ? `Opened ${new Date(operationsState.opened_at).toLocaleString("en-GB")}`
+    : "Waiting for Manager to open operations.";
+  boardSubtitle.textContent = !isOperationsOpen()
+    ? "Operations are closed. Open operations to begin assigning today's work."
+    : isManager()
+      ? "Managers can create, edit, delete, assign, and review all restaurant tasks."
+      : "Staff can only view tasks assigned to their own account and update their task status.";
+  openOperationsBtn.classList.toggle("hidden", !isManager() || isOperationsOpen());
+  newTaskBtn.classList.toggle("hidden", !isManager() || !isOperationsOpen());
+  closeDayBtn.classList.toggle("hidden", !isManager() || !isOperationsOpen());
+  closingHistoryCard.classList.toggle("hidden", !isManager());
+  dailyTasksCard.classList.toggle("hidden", !isManager() || !isOperationsOpen());
+  closeTaskDrawer();
+  workloadCard.classList.toggle("hidden", !isManager());
   mainGrid.classList.toggle("single-column", !isManager());
   renderAssignmentOptions();
   renderStaffFilterOptions();
   renderTasks();
+  renderActivities();
+  if (isManager()) {
+    renderClosingHistory();
+    renderDailyTaskOptions();
+  }
+  setTaskView(currentView);
 }
 
 async function loadProfiles() {
@@ -370,10 +1049,22 @@ async function loadProfiles() {
   profiles = data || [];
 }
 
+async function loadOperations() {
+  const { data, error } = await supabaseClient
+    .from("restaurant_operations")
+    .select("id, is_open, operation_cycle, business_date, opened_at, opened_by, updated_at")
+    .eq("id", 1)
+    .single();
+  if (error) throw error;
+  operationsState = data;
+}
+
 async function loadTasks() {
   const { data, error } = await supabaseClient
     .from("tasks")
-    .select("id, title, description, assigned_to, status, priority, category, due_date, created_at")
+    .select("id, title, description, assigned_to, status, priority, category, due_date, business_date, operation_cycle, archived_at, source_template_id, created_at")
+    .is("archived_at", null)
+    .eq("operation_cycle", operationsState.operation_cycle)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -381,6 +1072,61 @@ async function loadTasks() {
   }
 
   tasks = data || [];
+}
+
+async function loadActivities() {
+  const { data, error } = await supabaseClient
+    .from("activity_log")
+    .select("id, user_name, action, task_title, created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    throw error;
+  }
+
+  activities = data || [];
+}
+
+async function loadClosings() {
+  if (!isManager()) {
+    closings = [];
+    closingReviews = [];
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from("daily_closings")
+    .select("id, business_date, operation_cycle, opened_at, manager_name, total_tasks, completed_tasks, carried_tasks, overdue_tasks, issue_tasks, no_issue_tasks, closed_at")
+    .order("closed_at", { ascending: false })
+    .limit(10);
+
+  if (error) throw error;
+  closings = data || [];
+  const closingIds = closings.map((closing) => closing.id);
+  if (!closingIds.length) {
+    closingReviews = [];
+    return;
+  }
+  const { data: reviewData, error: reviewError } = await supabaseClient
+    .from("closing_task_reviews")
+    .select("closing_id, task_title, assigned_name, outcome, note, original_status")
+    .in("closing_id", closingIds)
+    .order("id");
+  if (reviewError) throw reviewError;
+  closingReviews = reviewData || [];
+}
+
+async function loadDailyTemplates() {
+  if (!isManager()) {
+    dailyTemplates = [];
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from("daily_task_templates")
+    .select("id, title, description, assigned_to, priority, category, due_offset_days, active, created_at")
+    .order("created_at");
+  if (error) throw error;
+  dailyTemplates = data || [];
 }
 
 function readLegacyTasks() {
@@ -420,7 +1166,9 @@ async function migrateLegacyTasks() {
         priority: VALID_PRIORITIES.includes(task.priority) ? task.priority : "Medium",
         category: VALID_CATEGORIES.includes(task.category) ? task.category : "Other",
         due_date: isValidDateValue(task.dueDate) ? task.dueDate || null : null,
-        created_by: activeUser.id
+        created_by: activeUser.id,
+        business_date: operationsState.business_date,
+        operation_cycle: operationsState.operation_cycle
       };
     });
 
@@ -443,8 +1191,12 @@ async function loadActiveUser(userId) {
     throw new Error("No profile was found for this account.");
   }
 
+  await loadOperations();
   await migrateLegacyTasks();
   await loadTasks();
+  await loadActivities();
+  await loadClosings();
+  await loadDailyTemplates();
 }
 
 async function initializeApp() {
@@ -479,17 +1231,22 @@ function editTask(id) {
   }
 
   editingTaskId = id;
+  ensureTaskTemplate(task.title);
   taskTitle.value = task.title;
+  renderQuickTaskOptions();
+  quickTaskSelect.value = task.title;
   taskDescription.value = task.description;
   renderAssignmentOptions(task.assigned_to);
   taskStatus.value = task.status;
   taskPriority.value = VALID_PRIORITIES.includes(task.priority) ? task.priority : "Medium";
   taskCategory.value = VALID_CATEGORIES.includes(task.category) ? task.category : "Other";
   taskDueDate.value = task.due_date || "";
-  formTitle.textContent = "Edit Restaurant Task";
+  formTitle.textContent = "Update Assigned Task";
   submitBtn.textContent = "Update Task";
   cancelEditBtn.classList.remove("hidden");
   setMessage(taskMessage, "info", "Editing selected task.");
+  taskFormCard.classList.add("edit-mode");
+  openTaskDrawer();
 }
 
 async function deleteTask(id) {
@@ -497,6 +1254,7 @@ async function deleteTask(id) {
     return;
   }
 
+  const targetTask = tasks.find((task) => task.id === id);
   const { error } = await supabaseClient.from("tasks").delete().eq("id", id);
 
   if (error) {
@@ -505,6 +1263,7 @@ async function deleteTask(id) {
   }
 
   await loadTasks();
+  await recordActivity("Task deleted", targetTask?.title || "Deleted task");
   resetTaskForm();
   renderTasks();
 }
@@ -524,6 +1283,7 @@ async function changeStatus(id, status) {
   }
 
   await loadTasks();
+  await recordActivity(`Task status changed to ${status}`, targetTask.title);
   renderTasks();
 }
 
@@ -559,6 +1319,7 @@ loginForm.addEventListener("submit", async (event) => {
 
   try {
     await loadActiveUser(data.user.id);
+    await recordActivity("Logged in");
     loginForm.reset();
     setMessage(authMessage, "", "");
     resetTaskForm();
@@ -608,6 +1369,12 @@ registerForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  await supabaseClient.from("activity_log").insert({
+    user_id: data.user.id,
+    user_name: fullName,
+    action: "User registered"
+  });
+
   await supabaseClient.auth.signOut({ scope: "local" });
   registerForm.reset();
   registerRole.value = "Manager";
@@ -620,7 +1387,13 @@ logoutBtn.addEventListener("click", async () => {
   activeUser = null;
   profiles = [];
   tasks = [];
+  activities = [];
+  closings = [];
+  closingReviews = [];
+  dailyTemplates = [];
+  operationsState = null;
   editingTaskId = null;
+  currentView = "list";
   loginForm.reset();
   registerForm.reset();
   resetTaskForm();
@@ -632,6 +1405,10 @@ taskForm.addEventListener("submit", async (event) => {
 
   if (!isManager()) {
     setMessage(taskMessage, "error", "Only managers can create or edit tasks.");
+    return;
+  }
+  if (!isOperationsOpen()) {
+    setMessage(taskMessage, "error", "Open restaurant operations before managing tasks.");
     return;
   }
 
@@ -683,9 +1460,16 @@ taskForm.addEventListener("submit", async (event) => {
     due_date: dueDate || null
   };
 
+  const previousTask = tasks.find((task) => task.id === editingTaskId);
+
   const result = editingTaskId
     ? await supabaseClient.from("tasks").update(taskData).eq("id", editingTaskId)
-    : await supabaseClient.from("tasks").insert({ ...taskData, created_by: activeUser.id });
+    : await supabaseClient.from("tasks").insert({
+        ...taskData,
+        created_by: activeUser.id,
+        business_date: operationsState.business_date,
+        operation_cycle: operationsState.operation_cycle
+      });
 
   if (result.error) {
     setMessage(taskMessage, "error", "Unable to save the task.");
@@ -693,11 +1477,196 @@ taskForm.addEventListener("submit", async (event) => {
   }
 
   await loadTasks();
+  await recordActivity(editingTaskId ? "Task edited" : "Task created", title);
+
+  if (previousTask?.assigned_to !== assignedTo && editingTaskId) {
+    await recordActivity(`Task reassigned to ${getProfileById(assignedTo)?.full_name || "Unassigned"}`, title);
+  } else if (!editingTaskId && assignedTo) {
+    await recordActivity(`Task assigned to ${getProfileById(assignedTo)?.full_name}`, title);
+  }
   resetTaskForm();
+  closeTaskDrawer();
   renderTasks();
 });
 
-cancelEditBtn.addEventListener("click", resetTaskForm);
+cancelEditBtn.addEventListener("click", () => {
+  resetTaskForm();
+  closeTaskDrawer();
+});
+newTaskBtn.addEventListener("click", () => {
+  resetTaskForm();
+  openTaskDrawer();
+});
+closeTaskDrawerBtn.addEventListener("click", () => {
+  resetTaskForm();
+  closeTaskDrawer();
+});
+taskDrawerBackdrop.addEventListener("click", () => {
+  resetTaskForm();
+  closeTaskDrawer();
+});
+quickTaskSelect.addEventListener("change", () => {
+  taskTitle.value = quickTaskSelect.value;
+  if (quickTaskSelect.value) taskDescription.focus();
+});
+manageTaskTemplatesBtn.addEventListener("click", () => {
+  editingTemplateIndex = null;
+  taskTemplateInput.value = "";
+  saveTaskTemplateBtn.textContent = "Add Task";
+  taskTemplateMessage.textContent = "";
+  renderTaskTemplateList();
+  taskTemplateModal.classList.remove("hidden");
+  taskTemplateInput.focus();
+});
+closeTaskTemplateModalBtn.addEventListener("click", () => taskTemplateModal.classList.add("hidden"));
+taskTemplateModal.addEventListener("click", (event) => {
+  if (event.target === taskTemplateModal) taskTemplateModal.classList.add("hidden");
+});
+taskTemplateForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const title = taskTemplateInput.value.trim();
+  const templates = getTaskTemplates();
+
+  if (!title) {
+    taskTemplateMessage.textContent = "Enter a task name.";
+    return;
+  }
+
+  const duplicateIndex = templates.findIndex((item) => item.toLowerCase() === title.toLowerCase());
+  if (duplicateIndex !== -1 && duplicateIndex !== editingTemplateIndex) {
+    taskTemplateMessage.textContent = "This task option already exists.";
+    return;
+  }
+
+  if (editingTemplateIndex === null) {
+    templates.push(title);
+  } else {
+    const previousTitle = templates[editingTemplateIndex];
+    templates[editingTemplateIndex] = title;
+    if (taskTitle.value === previousTitle) taskTitle.value = title;
+  }
+
+  saveTaskTemplates(templates);
+  editingTemplateIndex = null;
+  taskTemplateInput.value = "";
+  saveTaskTemplateBtn.textContent = "Add Task";
+  taskTemplateMessage.textContent = "Task options updated.";
+  renderTaskTemplateList();
+  renderQuickTaskOptions();
+});
+accountSwitcher.addEventListener("change", async () => {
+  const target = getProfileById(accountSwitcher.value);
+  if (!target || target.id === activeUser?.id) return;
+  await supabaseClient.auth.signOut({ scope: "local" });
+  activeUser = null;
+  tasks = [];
+  activities = [];
+  closings = [];
+  closingReviews = [];
+  dailyTemplates = [];
+  operationsState = null;
+  renderApp();
+  switchAuthTab("login");
+  loginUsername.value = target.username;
+  loginPassword.value = "";
+  setMessage(authMessage, "info", `Enter the password for ${target.full_name} (${target.role}).`);
+  loginPassword.focus();
+});
+manageDailyTasksBtn.addEventListener("click", () => {
+  resetDailyTaskForm();
+  renderDailyTaskManager();
+  dailyTaskModal.classList.remove("hidden");
+  dailyTaskTitle.focus();
+});
+closeDailyTaskModalBtn.addEventListener("click", () => dailyTaskModal.classList.add("hidden"));
+dailyTaskModal.addEventListener("click", (event) => {
+  if (event.target === dailyTaskModal) dailyTaskModal.classList.add("hidden");
+});
+cancelDailyTaskEditBtn.addEventListener("click", resetDailyTaskForm);
+dailyTaskForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!isManager()) return;
+  const title = dailyTaskTitle.value.trim();
+  const assignedTo = dailyTaskStaff.value || null;
+  if (!title) return setMessage(dailyTaskFormMessage, "error", "Enter a Daily Task name.");
+  if (assignedTo && getProfileById(assignedTo)?.role !== "Staff") {
+    return setMessage(dailyTaskFormMessage, "error", "Select a registered Staff account or Unassigned.");
+  }
+  const row = {
+    title,
+    description: dailyTaskDescription.value.trim(),
+    assigned_to: assignedTo,
+    priority: dailyTaskPriority.value,
+    category: dailyTaskCategory.value,
+    due_offset_days: Number(dailyTaskDueOffset.value),
+    active: true,
+    created_by: activeUser.id
+  };
+  const request = dailyTaskId.value
+    ? supabaseClient.from("daily_task_templates").update(row).eq("id", dailyTaskId.value)
+    : supabaseClient.from("daily_task_templates").insert(row);
+  const { error } = await request;
+  if (error) return setMessage(dailyTaskFormMessage, "error", "Unable to save this Daily Task.");
+  await loadDailyTemplates();
+  resetDailyTaskForm();
+  renderDailyTaskManager();
+  renderDailyTaskOptions();
+  setMessage(dailyTaskFormMessage, "success", "Daily Task saved.");
+});
+generateDailyTasksBtn.addEventListener("click", async () => {
+  if (!isManager()) return;
+  if (!isOperationsOpen()) return setMessage(dailyTaskMessage, "error", "Open operations before adding Daily Tasks.");
+  const selectedIds = [...dailyTaskOptions.querySelectorAll("input:checked")].map((input) => input.value);
+  if (!selectedIds.length) return setMessage(dailyTaskMessage, "error", "Select at least one Daily Task.");
+  generateDailyTasksBtn.disabled = true;
+  const businessDate = operationsState.business_date;
+  const { data: existing, error: existingError } = await supabaseClient
+    .from("tasks")
+    .select("source_template_id")
+    .eq("business_date", businessDate)
+    .eq("operation_cycle", operationsState.operation_cycle)
+    .in("source_template_id", selectedIds);
+  if (existingError) {
+    generateDailyTasksBtn.disabled = false;
+    return setMessage(dailyTaskMessage, "error", "Unable to check today's Daily Tasks.");
+  }
+  const existingIds = new Set((existing || []).map((task) => task.source_template_id));
+  const templatesToCreate = dailyTemplates.filter((template) => selectedIds.includes(template.id) && !existingIds.has(template.id));
+  const rows = templatesToCreate.map((template) => ({
+    title: template.title,
+    description: template.description,
+    assigned_to: template.assigned_to,
+    status: "To Do",
+    priority: template.priority,
+    category: template.category,
+    due_date: dateWithOffset(template.due_offset_days),
+    business_date: businessDate,
+    operation_cycle: operationsState.operation_cycle,
+    source_template_id: template.id,
+    created_by: activeUser.id
+  }));
+  if (rows.length) {
+    const { error } = await supabaseClient.from("tasks").insert(rows);
+    if (error) {
+      generateDailyTasksBtn.disabled = false;
+      return setMessage(dailyTaskMessage, "error", "Unable to generate today's assignments.");
+    }
+    await recordActivity(`Generated ${rows.length} Daily Tasks`);
+    await loadTasks();
+    renderTasks();
+  }
+  const skipped = selectedIds.length - rows.length;
+  setMessage(dailyTaskMessage, "success", `${rows.length} task(s) added${skipped ? `; ${skipped} already existed today` : ""}.`);
+  generateDailyTasksBtn.disabled = false;
+});
+openOperationsBtn.addEventListener("click", openOperations);
+closeDayBtn.addEventListener("click", openCloseDayModal);
+closeCloseDayModalBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
+cancelCloseDayBtn.addEventListener("click", () => closeDayModal.classList.add("hidden"));
+closeDayModal.addEventListener("click", (event) => {
+  if (event.target === closeDayModal) closeDayModal.classList.add("hidden");
+});
+confirmCloseDayBtn.addEventListener("click", completeBusinessDay);
 statusFilter.addEventListener("change", renderTasks);
 [priorityFilter, categoryFilter, staffFilter, overdueFilter].forEach((filter) => {
   filter.addEventListener("change", renderTasks);
@@ -709,6 +1678,18 @@ clearFiltersBtn.addEventListener("click", () => {
   staffFilter.value = "All";
   overdueFilter.value = "All";
   renderTasks();
+});
+listViewBtn.addEventListener("click", () => setTaskView("list"));
+kanbanViewBtn.addEventListener("click", () => setTaskView("kanban"));
+sideNav.querySelectorAll("a[data-section]").forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (link.dataset.view) setTaskView(link.dataset.view);
+    requestAnimationFrame(() => {
+      const target = document.getElementById(link.dataset.section);
+      if (target && !target.classList.contains("hidden")) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 });
 
 switchAuthTab("login");

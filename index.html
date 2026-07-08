@@ -4,16 +4,38 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Restaurant Operations Task Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <header class="header">
-      <h1>Restaurant Operations Task Tracker</h1>
-      <p>Secure restaurant task tracking with account registration, role-based access, staff assignment, status tracking, and persistent sessions.</p>
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 14v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-5" />
+          <path d="M18 14a3.5 3.5 0 0 0 1-6.86A4 4 0 0 0 12 4.5 4 4 0 0 0 5 7.14 3.5 3.5 0 0 0 6 14Z" />
+          <path d="M9 17h6" />
+        </svg>
+      </div>
+      <div>
+        <p class="eyebrow">Restaurant Operations System</p>
+        <h1>ResTask Operations</h1>
+        <p>Plan daily work, assign staff, monitor progress, and keep every shift accountable.</p>
+      </div>
+      <nav id="sideNav" class="side-nav hidden" aria-label="Workspace navigation">
+        <a href="#analyticsSection" data-section="analyticsSection"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>Overview</a>
+        <a href="#listView" data-section="listView" data-view="list"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3.5 6h.01"/><path d="M3.5 12h.01"/><path d="M3.5 18h.01"/></svg></span>Tasks</a>
+        <a href="#kanbanView" data-section="kanbanView" data-view="kanban"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="14" rx="1.5"/></svg></span>Board</a>
+        <a href="#workloadCard" data-section="workloadCard"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 6"/><path d="M17.5 14.2a5.5 5.5 0 0 1 3 4.8"/></svg></span>Team</a>
+        <a href="#activityCard" data-section="activityCard"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5 6 4-13L16 12h5"/></svg></span>Activity</a>
+        <a href="#closingHistoryCard" data-section="closingHistoryCard"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></svg></span>History</a>
+      </nav>
     </header>
 
     <section id="authSection" class="card auth-card">
+      <p class="auth-lede">Sign in to plan the day's prep, assign your team, and close out every service with a clean handover.</p>
       <div class="auth-tabs">
         <button type="button" id="loginTab" class="tab-btn active">Login</button>
         <button type="button" id="registerTab" class="tab-btn">Register</button>
@@ -56,67 +78,92 @@
     </section>
 
     <section id="appSection" class="hidden">
+      <section class="app-topbar">
+        <div><p class="eyebrow dark">Live workspace</p><h2>Restaurant Operations</h2></div>
+        <div class="topbar-actions">
+          <button type="button" id="openOperationsBtn" class="primary-btn hidden"><span>▶</span> Open Operations</button>
+          <button type="button" id="closeDayBtn" class="close-day-btn hidden"><span>✓</span> Close Today</button>
+          <button type="button" id="newTaskBtn" class="new-task-btn hidden"><span>+</span> New Task</button>
+        </div>
+      </section>
+
       <section class="card session-card">
         <div>
           <p class="session-label">Active User</p>
           <h2 id="activeUserName">-</h2>
           <p id="activeUserRole" class="session-role">Role: -</p>
         </div>
+        <div class="operation-state">
+          <p class="session-label">Operations Status</p>
+          <strong id="operationStatus">Closed</strong>
+          <span id="operationStatusDetail">Waiting for Manager to open operations.</span>
+        </div>
+        <div class="account-actions">
+          <label for="accountSwitcher">Switch account</label>
+          <select id="accountSwitcher" aria-label="Choose another account"></select>
+          <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
+        </div>
+      </section>
 
-        <button type="button" id="logoutBtn" class="secondary-btn">Logout</button>
+      <nav class="workspace-nav" aria-label="Task view">
+        <button type="button" id="listViewBtn" class="view-btn active">List View</button>
+        <button type="button" id="kanbanViewBtn" class="view-btn">Board</button>
+      </nav>
+
+      <section id="analyticsSection" class="analytics-strip" aria-label="Task analytics">
+        <div><strong id="totalAnalytics">0</strong><span>Total</span></div>
+        <div><strong id="todoAnalytics">0</strong><span>To Do</span></div>
+        <div><strong id="progressAnalytics">0</strong><span>In Progress</span></div>
+        <div><strong id="doneAnalytics">0</strong><span>Done</span></div>
+        <div><strong id="overdueAnalytics">0</strong><span>Overdue</span></div>
+        <div><strong id="highAnalytics">0</strong><span>High Priority</span></div>
+      </section>
+
+      <section id="dailyTasksCard" class="card daily-tasks-card hidden">
+        <div class="section-heading">
+          <div><h2>Daily Tasks</h2><p>Select reusable work and create today's assignments in one action.</p></div>
+          <button type="button" id="manageDailyTasksBtn" class="secondary-btn">Manage Daily Tasks</button>
+        </div>
+        <div id="dailyTaskOptions" class="daily-task-options"></div>
+        <div class="daily-task-footer">
+          <p id="dailyTaskMessage" class="status-message hidden"></p>
+          <button type="button" id="generateDailyTasksBtn" class="primary-btn">Add Selected to Today</button>
+        </div>
       </section>
 
       <main id="mainGrid" class="main-grid">
-        <section id="taskFormCard" class="card">
-          <h2 id="formTitle">Create Restaurant Task</h2>
+        <section id="taskFormCard" class="card task-drawer hidden" aria-label="Task editor">
+          <div class="drawer-header">
+            <div><p class="drawer-kicker">Task details</p><h2 id="formTitle">Create Task</h2></div>
+            <button type="button" id="closeTaskDrawerBtn" class="drawer-close" aria-label="Close task editor">×</button>
+          </div>
 
           <div id="taskMessage" class="status-message hidden"></div>
 
           <form id="taskForm">
-            <label for="taskTitle">Restaurant Task</label>
-            <input type="text" id="taskTitle" placeholder="Example: Prepare dinner service station" />
+            <div class="form-field task-select-field">
+              <div class="task-template-label">
+                <label for="quickTaskSelect">Task</label>
+                <button type="button" id="manageTaskTemplatesBtn" class="template-edit-btn" title="Manage task options" aria-label="Manage task options">✎</button>
+              </div>
+              <select id="quickTaskSelect" required></select>
+              <input type="hidden" id="taskTitle" />
+            </div>
+            <div class="form-field form-field-wide"><label for="taskDescription">Details</label><textarea id="taskDescription" placeholder="Add preparation notes or service instructions"></textarea></div>
+            <div class="form-field"><label for="assignedUser">Assigned Staff</label><select id="assignedUser"></select></div>
+            <div class="form-field"><label for="taskStatus">Status</label><select id="taskStatus"><option value="To Do">To Do</option><option value="In Progress">In Progress</option><option value="Done">Done</option></select></div>
+            <div class="form-field"><label for="taskPriority">Priority</label><select id="taskPriority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select></div>
+            <div class="form-field"><label for="taskCategory">Category</label><select id="taskCategory"><option value="Kitchen Preparation">Kitchen Preparation</option><option value="Cleaning">Cleaning</option><option value="Inventory">Inventory</option><option value="Service Setup">Service Setup</option><option value="Maintenance">Maintenance</option><option value="Other" selected>Other</option></select></div>
+            <div class="form-field"><label for="taskDueDate">Due Date</label><input type="date" id="taskDueDate" lang="en-GB" /><p class="field-hint">Displayed in English, for example 06 Jul 2026.</p></div>
 
-            <label for="taskDescription">Details</label>
-            <textarea id="taskDescription" placeholder="Add preparation notes or service instructions"></textarea>
-
-            <label for="assignedUser">Assigned Staff</label>
-            <select id="assignedUser"></select>
-
-            <label for="taskStatus">Status</label>
-            <select id="taskStatus">
-              <option value="To Do">To Do</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Done">Done</option>
-            </select>
-
-            <label for="taskPriority">Priority</label>
-            <select id="taskPriority">
-              <option value="Low">Low</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="High">High</option>
-            </select>
-
-            <label for="taskCategory">Category</label>
-            <select id="taskCategory">
-              <option value="Kitchen Preparation">Kitchen Preparation</option>
-              <option value="Cleaning">Cleaning</option>
-              <option value="Inventory">Inventory</option>
-              <option value="Service Setup">Service Setup</option>
-              <option value="Maintenance">Maintenance</option>
-              <option value="Other" selected>Other</option>
-            </select>
-
-            <label for="taskDueDate">Due Date</label>
-            <input type="date" id="taskDueDate" />
-
-            <div class="button-row">
+            <div class="button-row form-field-wide">
               <button type="submit" id="submitBtn" class="primary-btn">Add Task</button>
               <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Cancel</button>
             </div>
           </form>
         </section>
 
-        <section class="card">
+        <section id="listView" class="card">
           <div class="task-header-row">
             <div>
               <h2>Operations Board</h2>
@@ -191,8 +238,94 @@
           <div id="taskList" class="task-list"></div>
         </section>
       </main>
+
+      <section id="kanbanView" class="card hidden">
+        <div class="section-heading">
+          <div><h2>Task Board</h2><p>Tasks are grouped by their current workflow status.</p></div>
+        </div>
+        <div class="kanban-board">
+          <section class="board-column todo-column"><h3><span><i class="status-dot"></i>To Do</span><span id="kanbanTodoCount">0</span></h3><div id="kanbanTodo" class="kanban-column"></div></section>
+          <section class="board-column progress-column"><h3><span><i class="status-dot"></i>In Progress</span><span id="kanbanProgressCount">0</span></h3><div id="kanbanProgress" class="kanban-column"></div></section>
+          <section class="board-column done-column"><h3><span><i class="status-dot"></i>Done</span><span id="kanbanDoneCount">0</span></h3><div id="kanbanDone" class="kanban-column"></div></section>
+        </div>
+      </section>
+
+      <section class="reporting-grid">
+        <section id="workloadCard" class="card">
+          <div class="section-heading"><div><h2>Staff Workload</h2><p>Current assignment and completion totals.</p></div></div>
+          <div id="workloadList" class="workload-list"></div>
+        </section>
+        <section id="activityCard" class="card">
+          <div class="section-heading"><div><h2>Recent Activity</h2><p>Latest account and task actions.</p></div></div>
+          <div id="activityList" class="activity-list"></div>
+        </section>
+      </section>
+      <section id="closingHistoryCard" class="card closing-history-card hidden">
+        <div class="section-heading"><div><h2>Closing History</h2><p>Daily business summaries recorded by Managers.</p></div></div>
+        <div id="closingHistoryList" class="closing-history-list"></div>
+      </section>
+      <div id="taskDrawerBackdrop" class="drawer-backdrop hidden"></div>
     </section>
   </div>
+
+  <section id="taskTemplateModal" class="template-modal hidden" aria-label="Manage task options">
+    <div class="template-dialog">
+      <div class="drawer-header">
+        <div><p class="drawer-kicker">Reusable options</p><h2>Manage Tasks</h2></div>
+        <button type="button" id="closeTaskTemplateModalBtn" class="drawer-close" aria-label="Close task manager">×</button>
+      </div>
+      <form id="taskTemplateForm" class="template-add-row">
+        <input type="text" id="taskTemplateInput" placeholder="Enter a new task name" maxlength="100" />
+        <button type="submit" id="saveTaskTemplateBtn" class="primary-btn">Add Task</button>
+      </form>
+      <p id="taskTemplateMessage" class="template-message"></p>
+      <div id="taskTemplateList" class="template-list"></div>
+    </div>
+  </section>
+
+  <section id="closeDayModal" class="template-modal hidden" aria-label="Close today's operations">
+    <div class="template-dialog closing-dialog">
+      <div class="drawer-header">
+        <div><p class="drawer-kicker">End of day</p><h2>Close Today’s Operations</h2></div>
+        <button type="button" id="closeCloseDayModalBtn" class="drawer-close" aria-label="Close summary">×</button>
+      </div>
+      <p class="closing-intro">Review every unfinished task. After confirmation, all of today's tasks will be archived and the active workspace will be cleared.</p>
+      <div class="closing-summary">
+        <div><strong id="closingTotal">0</strong><span>Total</span></div>
+        <div><strong id="closingCompleted">0</strong><span>Completed</span></div>
+        <div><strong id="closingCarried">0</strong><span>Needs Review</span></div>
+        <div><strong id="closingOverdue">0</strong><span>Overdue</span></div>
+      </div>
+      <div id="closingReviewList" class="closing-review-list"></div>
+      <div id="closeDayMessage" class="status-message hidden"></div>
+      <div class="closing-warning"><strong>This action cannot be undone.</strong><span>Review the figures before confirming.</span></div>
+      <div class="button-row closing-actions">
+        <button type="button" id="cancelCloseDayBtn" class="secondary-btn">Cancel</button>
+        <button type="button" id="confirmCloseDayBtn" class="primary-btn">Confirm Closing</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="dailyTaskModal" class="template-modal hidden" aria-label="Manage daily tasks">
+    <div class="template-dialog daily-task-dialog">
+      <div class="drawer-header">
+        <div><p class="drawer-kicker">Reusable assignments</p><h2>Manage Daily Tasks</h2></div>
+        <button type="button" id="closeDailyTaskModalBtn" class="drawer-close" aria-label="Close daily task manager">X</button>
+      </div>
+      <form id="dailyTaskForm" class="daily-task-form">
+        <input type="hidden" id="dailyTaskId" />
+        <div class="form-field form-field-wide"><label for="dailyTaskTitle">Task name</label><input type="text" id="dailyTaskTitle" maxlength="100" required /></div>
+        <div class="form-field form-field-wide"><label for="dailyTaskDescription">Instructions</label><textarea id="dailyTaskDescription"></textarea></div>
+        <div class="form-field"><label for="dailyTaskStaff">Default Staff</label><select id="dailyTaskStaff"></select></div>
+        <div class="form-field"><label for="dailyTaskPriority">Priority</label><select id="dailyTaskPriority"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+        <div class="form-field"><label for="dailyTaskCategory">Category</label><select id="dailyTaskCategory"><option>Kitchen Preparation</option><option>Cleaning</option><option>Inventory</option><option>Service Setup</option><option>Maintenance</option><option selected>Other</option></select></div>
+        <div class="form-field"><label for="dailyTaskDueOffset">Due in</label><select id="dailyTaskDueOffset"><option value="0">Today</option><option value="1">Tomorrow</option><option value="2">In 2 days</option><option value="7">In 7 days</option></select></div>
+        <div class="button-row form-field-wide"><button type="submit" class="primary-btn">Save Daily Task</button><button type="button" id="cancelDailyTaskEditBtn" class="secondary-btn">Clear</button></div>
+      </form>
+      <p id="dailyTaskFormMessage" class="status-message hidden"></p>
+      <div id="dailyTaskTemplateList" class="template-list"></div>
+    </div>
+  </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0"></script>
   <script src="app.js"></script>
